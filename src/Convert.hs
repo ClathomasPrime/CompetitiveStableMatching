@@ -86,7 +86,6 @@ mpda :: MatchingMonad m a b => m ()
 mpda = do
   whileM_ (not . S.null <$> use singleProposingMen) $ do
     man <- S.findMin <$> use singleProposingMen
-    -- traceShowM man
     singleProposingMen %= S.delete man
 
     (topWomen, remainingWomen) <- use $ menProposalStatus . ix man
@@ -124,10 +123,6 @@ acceptProposalSimple woman man = do
   womanPref <- ask <&> view (womenPrefs . ix woman)
   let beforeIsh Nothing = man `elem` womanPref
       beforeIsh (Just oldMatch) = man `elem` takeWhile (/=oldMatch) womanPref
-  -- if match == Just man
-  --   then traceShowM $ "acceptoCheck: " ++ show match ++ show man
-  --     ++ show (beforeIsh match)
-  --   else return ()
   return $ beforeIsh match
 
 shoutMatch :: MatchingMonad m a b => m ()
@@ -149,7 +144,6 @@ mosmToWosm :: MatchingMonad m a b => m ()
 mosmToWosm = do
   initMosmToWosm
   whileM_ (not . null <$> use improvingWomen) $ do
-    -- traceShowM =<< use improvingWomen
     (experimentalMatching .=) =<< use stableMatching
 
     womanZero <- S.findMin <$> use improvingWomen
@@ -161,7 +155,6 @@ terminalPhaseCleanup :: MatchingMonad m a b => m ()
 terminalPhaseCleanup = do
   (experimentalMatching .=) =<< use stableMatching
   vol <- use volatileWomen
-  -- traceM $ "vol terminal: " ++ show vol
   womenAtTopMatch %= \s -> foldr S.insert s vol
   improvingWomen %= \s -> foldr S.delete s vol
   volatileWomen .= []
@@ -171,26 +164,20 @@ startNewDivorceChain womanZero = do
   volatileWomen .= [womanZero]
   manZero <- use $ experimentalMatching . at womanZero
   floatingMan .= manZero -- ^ already wrapped in Just
-  -- traceShowM (womanZero, manZero)
   experimentalMatching . at womanZero .= Nothing
 
-  -- traceM $ "zero: " ++ show (womanZero, manZero)
 
   whileM_ (not . null <$> use floatingMan) $ do
     man <- fromJust <$> use floatingMan -- (theoretically) shouldn't by loop cond
-    -- traceM $ "proposing man: " ++ show man
     (topWomen, remainingWomen) <- use $ menProposalStatus . ix man
 
-    -- traceShowM (man, topWomen)
     rejectingWomen <- flip takeWhileM topWomen $ \woman -> do
       accepts <- acceptProposalSimple woman man
       proposalsRecieved . ix woman += 1
-      -- traceM $ show woman ++ " replies with " ++ show accepts
       return $ not accepts
     menProposalStatus . ix man . _2 %= \s -> foldr S.insert s rejectingWomen
     let topWomen' = dropWhile (`elem` rejectingWomen) topWomen
     menProposalStatus . ix man . _1 .= topWomen'
-    -- menProposalStatus . ix man . _1 .= drop 1 topWomen'
 
     case topWomen' of
       [] -> do -- This case doesn't happen if |W| > |M|
@@ -204,7 +191,6 @@ startNewDivorceChain womanZero = do
 womanUpgradesConvert :: MatchingMonad m a b => b -> a -> m ()
 womanUpgradesConvert woman man = do
   (stabWomen, mu) <- (,) <$> use womenAtTopMatch <*> use stableMatching
-  -- traceM $ "stabWomen: " ++ show stabWomen
   if woman `elem` stabWomen || woman `M.notMember` mu
     then floatingMan .= Nothing -- terminalPhaseCleanup
 
@@ -216,11 +202,6 @@ womanUpgradesConvert woman man = do
     experimentalMatching . at woman .= Just man
 
     vol <- use volatileWomen
-    -- traceM $ "vol improver: " ++ show vol ++ " at " ++ show (woman, man)
-    -- traceM $ "new floating man: " ++ show oldMatch
-    -- case oldMatch of
-    --   Just m -> traceShowM =<< use (menProposalStatus . at m)
-    --   Nothing -> return ()
 
     if woman `elem` vol
       then do -- ^ new stable match found (simple improvement cycle)
@@ -233,9 +214,8 @@ womanUpgradesConvert woman man = do
         stableMatching .= expImp `M.union` stab
         shoutMatch
         volatileWomen .= volRemaining -- ^ empty iff woman == womanZero, as we want!
-        -- traceShowM volRemaining
 
-      else do -- continue trying to upggrade
+      else do -- continue trying to upgrade
         volatileWomen %= (woman:)
 
 
