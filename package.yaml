@@ -18,6 +18,7 @@ dependencies:
   - MonadRandom
   - random-shuffle
   - mtl
+  - bimap
 
 executables:
   competitive-matching:

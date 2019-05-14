@@ -19,21 +19,31 @@ import Utils
 -- newtype M = M Int
 --   deriving(Eq, Ord, Show)
 
-randomFullLengthList :: MonadRandom m => Int -> m [Int]
-randomFullLengthList len = shuffleM [1..len]
+randomFullLengthList :: (Enum t, MonadRandom m) => Int -> t -> m [t]
+randomFullLengthList len t = shuffleM [t..toEnum (fromEnum t + len - 1)]
 
-randomPrefSet :: MonadRandom m => Int -> Int -> m (Map Int [Int])
-randomPrefSet numMen numWomen =
-  M.fromList . zip [1..numMen] <$>
-    replicateM numMen (randomFullLengthList numWomen)
+randomPrefSet :: (Enum s, Ord s, Enum t, MonadRandom m)
+  => Int -> s -> Int -> t -> m (Map s [t])
+randomPrefSet numMen s numWomen t =
+  M.fromList . zip [s..toEnum (fromEnum s + numMen)] <$>
+    replicateM numMen (randomFullLengthList numWomen t)
+
+unbalancedRandomMarketFrom :: (Enum s, Ord s, Enum t, Ord t, MonadRandom m) =>
+  Int -> s -> Int -> t -> m (Map s [t], Map t [s])
+unbalancedRandomMarketFrom nmen s nwomen t =
+  (,) <$> randomPrefSet nmen s nwomen t <*> randomPrefSet nwomen t nmen s
+
+unbalancedRandomMarket :: MonadRandom m =>
+  Int -> Int -> m (Map Int [Int], Map Int [Int])
+unbalancedRandomMarket nmen nwomen =
+  (,) <$> randomPrefSet nmen 1 nwomen 1 <*> randomPrefSet nwomen 1 nmen 1
 
 balancedRandomMarket :: MonadRandom m => Int -> m (Map Int [Int], Map Int [Int])
 balancedRandomMarket num = unbalancedRandomMarket num num
 
-unbalancedRandomMarket ::
-  MonadRandom m => Int -> Int -> m (Map Int [Int], Map Int [Int])
-unbalancedRandomMarket nmen nwomen =
-  (,) <$> randomPrefSet nmen nwomen <*> randomPrefSet nwomen nmen
+
+
+
 
 nFixedVsStableBalanced :: IO (Int,Int)
 nFixedVsStableBalanced = do

@@ -6,6 +6,9 @@ import Data.Maybe
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 
+import Control.Monad.RWS
+import Data.Functor.Contravariant
+
 invert :: (Ord a, Ord b) => Map a b -> Map b a
 invert map1 = M.foldlWithKey inserto (M.empty) map1
   where inserto m k v = M.insert v k m
@@ -44,3 +47,49 @@ topAfter prefs man woman = do
   w <- listToMaybe . drop 1 . dropWhile (/= woman) $ manPrefs
   return w
 
+--------------------------------------------------------------------------------
+
+whileAvailable :: Monad m => m (Maybe a) -> (a -> m b) -> m [b]
+whileAvailable p m = do
+  r <- p
+  case r of
+    Nothing -> return []
+    Just a -> do { b <- m a ; (b:) <$> whileAvailable p m }
+
+takeWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
+takeWhileM p [] = return []
+takeWhileM p (a:as) = do
+  b <- p a
+  if b then (a:) <$> takeWhileM p as else return []
+
+whileM_ :: Monad m => m Bool -> m a -> m ()
+whileM_ p m = do
+  v <- p
+  if v then m >> whileM_ p m else return ()
+
+doWhileM_ :: Monad m => m Bool -> m ()
+doWhileM_ m = do
+  b <- m
+  if b then doWhileM_ m else return ()
+
+performIfSucceeds :: MonadState s m => m (Maybe a) -> m (Maybe a)
+performIfSucceeds m = do
+  s <- get
+  res <- m
+  case res of
+    Nothing -> put s >> return Nothing
+    Just a -> return (Just a)
+
+
+
+-- Fold (Map k v) k = forall f. (Contravariant f, Applicative f) =>
+--   (a -> f a) -> Map k v -> f (Map k v)
+keysF :: Fold (Map k v) k
+keysF f = M.traverseWithKey (\k v -> phantom (f k))
+--                     :: (k -> v -> f v)           -> Map k v -> f (Map k b)
+-- phantom is kinda like ``f puts my key in a container with no values, convert it to have the correct type''
+--   (phantom takes a contravariant and covariant - these can't meaningfully hold stuff)
+-- [21:55] <Solonarv> the rest of the explanation is: optics tend to have a type that looks a bit like that of 'traverse'
+-- [21:55] <Solonarv> traverse     :: forall f.  Applicative f                   => (a -> f a) -> t a -> f (t a)
+-- [21:55] <Solonarv> type Fold s a = forall f. (Applicative f, Contravariant f) => (a -> f a) -> s   -> f  s
+-- [21:56] <Solonarv> and there is a function in Data.Map with a type that looks very close to what we want - namely, traverseWithKey

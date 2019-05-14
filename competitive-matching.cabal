@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e58297f6817084d2a41c360c2801db78e0147ab5f25daaa2b693356cd90e8e7c
+-- hash: f2ef8b99bee8f835b549c9fb3585c0ec24302c52aff819033267843ec1e2909d
 
 name:           competitive-matching
 version:        0.1.0.0
@@ -22,6 +22,7 @@ executable competitive-matching
   main-is: Main.hs
   other-modules:
       Convert
+      Lattice
       Rand
       RandUtils
       Utils
@@ -31,6 +32,7 @@ executable competitive-matching
   build-depends:
       MonadRandom
     , base >=4.7 && <5
+    , bimap
     , containers
     , lens
     , mtl

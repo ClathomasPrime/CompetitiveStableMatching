@@ -122,6 +122,20 @@ checkStable men women matchingWI
 
            in (matchA == Just b) || (matchA `prefA` b) || (matchB `prefB` a)
 
+
+--------------------------------------------------------------------------------
+-- iic :: (Ord a, Ord b) =>
+--   Map a [b] -> Map b [a] -> Map b a -> b -> Maybe (Map a b)
+-- iic menPrefs womanPrefs mu0 w0 = do
+--   man <- M.lookup w0 mu0
+--   iicManStep menPrefs womanPrefs mu0 man w0
+--
+-- iicManStep :: (Ord a, Ord b) =>
+--   Map a [b] -> Map b [a] -> Map b a -> a -> b -> Maybe (Map a b)
+-- iicManStep menPrefs womanPrefs mu0 man w0 = do
+--   let mu' = M.delete w0 mu0
+--   nextWomen <- drop 1 . dropWhile (/= w0) <$> M.lookup man menPrefs
+--   undefined -- proposeDownList nextWomen
 --------------------------------------------------------------------------------
 
 strategicCase :: (Map Int [Char], Map Char [Int])
@@ -133,7 +147,8 @@ strategicCase =
     ]
   , M.fromList
     [ ('a', [2,1,3])
-    , ('b', [1,2,3])
+    -- , ('b', [1,2,3])
+    , ('b', [1,3,2])
     , ('c', [1,2,3])
     ]
   )
