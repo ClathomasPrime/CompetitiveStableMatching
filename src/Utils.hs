@@ -9,6 +9,9 @@ import qualified Data.Map.Strict as M
 import Control.Monad.RWS
 import Data.Functor.Contravariant
 
+record :: (a -> b) -> a -> (a, b)
+record f a = (a, f a)
+
 invert :: (Ord a, Ord b) => Map a b -> Map b a
 invert map1 = M.foldlWithKey inserto (M.empty) map1
   where inserto m k v = M.insert v k m
@@ -80,7 +83,21 @@ performIfSucceeds m = do
     Nothing -> put s >> return Nothing
     Just a -> return (Just a)
 
+halfs :: [a] -> ([a], [a])
+halfs list = (take k list, drop k list)
+  where k = length list `div` 2
 
+nproduct :: Int -> [a] -> [[a]]
+nproduct 0 _ = [ [] ]
+nproduct n as = (:) <$> as <*> nproduct (n-1) as
+
+splits :: [a] -> [([a], [a])]
+splits [] = [([], [])]
+splits (a:as) = ([],a:as) : fmap (\(u,v) -> (a:u, v)) (splits as)
+
+rotate :: Int -> [a] -> [a]
+rotate _ [] = []
+rotate n xs = zipWith const (drop n (cycle xs)) xs
 
 -- Fold (Map k v) k = forall f. (Contravariant f, Applicative f) =>
 --   (a -> f a) -> Map k v -> f (Map k v)

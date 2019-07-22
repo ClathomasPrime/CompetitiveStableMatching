@@ -2,6 +2,8 @@
   TupleSections, TypeFamilies #-}
 module Convert where
 
+import qualified Data.Bimap as BM
+import Data.Bimap (Bimap)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Map.Strict (Map)
@@ -11,6 +13,9 @@ import Control.Lens
 import Data.Set.Lens
 import Data.Maybe
 import Control.Monad.RWS
+import Data.Function
+import Data.Tuple
+import Data.List
 
 import Utils
 import Main
@@ -18,6 +23,25 @@ import Rand
 
 import Debug.Trace
 
+
+--------------------------------------------------------------------------------
+-- Rotation (out of order... refactor eventually
+--------------------------------------------------------------------------------
+
+instance (Ord a, Ord b, Read a, Read b) => Read (Bimap a b) where
+  readsPrec _ str = [(BM.fromList . read $ str, "")]
+
+-- read as: (a1,b1), (a2,b2), (a3,b3) ==>
+--   man a2 goes from b1 to b2. This holds cyclically.
+newtype Rotation a b = Rotation { _getRotation :: [(a,b)] }
+  deriving(Show, Read, Eq, Ord)
+makeLenses 'Rotation
+
+-- canonicalize rotations by putting the smallest-indexed man first.
+makeRotation :: (Ord b, Ord a) => [(a,b)] -> Rotation a b
+makeRotation [] = Rotation []
+makeRotation rot = Rotation .  uncurry (++) . swap
+  . minimumBy (compare `on` fst . head . snd) . init . splits $ rot
 
 --------------------------------------------------------------------------------
 -- Monad
@@ -32,19 +56,28 @@ makeLenses 'MatchingInput
 data MatchingState a b = MatchingState
   { _womenAtTopMatch :: Set b -- ^ unused during MPDA
   , _improvingWomen :: Set b -- ^ unused during MPDA
+  -- after mpda, set of women is (disj) union of womenAtTop,
+  --  improvingWomen, {notMember stableMatching}
   , _proposalsRecieved :: Map b Int
 
   , _floatingMan :: Maybe a -- ^ unused during MPDA
   , _volatileWomen :: [b] -- ^ unused during MPDA
-  -- ^ invariant: one is empty iff the other is empty
+  , _volatileMen :: [a] -- ^ unused during MPDA
+  -- ^ invariant: one is empty iff the other are empty
   -- ^ note: stored in inverse (stack) order
+  -- , _rotationsFound :: RotationPoset a b
 
   , _singleProposingMen :: Set a -- ^ unused during convert to WOSM
   , _singleUnmatchedMen :: Set a -- ^ unused during convert to WOSM
   , _menProposalStatus :: Map a ([b], Set b)
   -- First element: remaining proposals; second: women already proposed to
+  --   subtlety: _1 is women he hasn't proposed to, _2 is women who have rejected him.
+  --     thus, his current match (if it exists) is in neither collection.
+  --  Another funny thing: after a terminal phase rejection chain, there is
+  --    ``one too many'' element in rejected set (the worst stable partner)
 
   , _stableMatching :: Map b a
+  -- invariant: after mpda, w being in matched set is encoded as beging a key in this
   , _experimentalMatching :: Map b a -- ^ unused during MPDA
   } deriving(Show, Read, Eq, Ord)
 makeLenses 'MatchingState
@@ -52,7 +85,7 @@ makeLenses 'MatchingState
 initialMatchingState :: (Ord a, Ord b) => MatchingInput a b -> MatchingState a b
 initialMatchingState (MatchingInput menPrefs womenPrefs) =
   MatchingState S.empty S.empty (fmap (const 0) womenPrefs)
-    Nothing []
+    Nothing [] []
     men S.empty (fmap (,S.empty) menPrefs) M.empty M.empty
   where women = M.keysSet womenPrefs
         men = M.keysSet menPrefs
@@ -62,7 +95,7 @@ swapGenders (MatchingInput u v) = MatchingInput v u
 
 type MatchingMonad m a b
   = (Show a, Show b, Ord a, Ord b, MonadState (MatchingState a b) m,
-    MonadReader (MatchingInput a b) m, MonadWriter [(Map b a, [b])] m)
+    MonadReader (MatchingInput a b) m, MonadWriter [(Map b a, [b], Rotation a b)] m)
     -- the writer instance holds the stable matches, and also
     -- the volatile women when the match was found. admitedly, this is hacky
     -- and just because I want those volatile women for a very specific reason.
@@ -77,11 +110,21 @@ mosmF prefs = view (_2.stableMatching)
 
 -- procede from one to the other by some (order undefined) sequence of simple
 -- improvement cycles
-mosmToWosmF :: (Show a, Show b, Ord a, Ord b) => MatchingInput a b -> [Map b a]
+mosmToWosmF :: (Show a, Show b, Ord a, Ord b)
+  => MatchingInput a b -> [(Map b a, Rotation a b)]
 mosmToWosmF prefs
-  = fmap fst . view _3 $ runRWS (mpda >> shoutMatch >> mosmToWosm)
+  = fmap (\(u,_,v) -> (u,v)) . view _3 $ runRWS mosmToWosm
       prefs (initialMatchingState prefs)
 
+rotationsF :: (Show a, Show b, Ord a, Ord b)
+  => MatchingInput a b -> [Rotation a b]
+rotationsF prefs
+  = fmap (\(_,_,v) -> v) . view _3 $ runRWS mosmToWosm
+      prefs (initialMatchingState prefs)
+
+
+-- builds up stableMatching, while keeping proposalsRecieved,
+--   singleUnmatchedMen, menProposingStatus, updated and other fields empty
 mpda :: MatchingMonad m a b => m ()
 mpda = do
   whileM_ (not . S.null <$> use singleProposingMen) $ do
@@ -125,11 +168,11 @@ acceptProposalSimple woman man = do
       beforeIsh (Just oldMatch) = man `elem` takeWhile (/=oldMatch) womanPref
   return $ beforeIsh match
 
-shoutMatch :: MatchingMonad m a b => m ()
-shoutMatch = do
+shoutMatch :: MatchingMonad m a b => Rotation a b -> m ()
+shoutMatch rot = do
   mu <- use stableMatching
   vol <- use volatileWomen
-  tell [(mu, vol)]
+  tell [(mu, vol, rot)]
 
 
 
@@ -138,11 +181,17 @@ initMosmToWosm = do
   matchedWomen <- setOf (stableMatching . keysF) <$> get
   improvingWomen .= matchedWomen
   allWomen <- setOf (womenPrefs . keysF) <$> ask
-  womenAtTopMatch .= S.empty
+  womenAtTopMatch .= allWomen `S.difference` matchedWomen
 
 mosmToWosm :: MatchingMonad m a b => m ()
 mosmToWosm = do
+  mpda
+  shoutMatch (makeRotation [])
+  manOpt <- use stableMatching
+  -- rotationsFound . psManOptMatching .= manOpt
+
   initMosmToWosm
+
   whileM_ (not . null <$> use improvingWomen) $ do
     (experimentalMatching .=) =<< use stableMatching
 
@@ -151,6 +200,9 @@ mosmToWosm = do
 
     terminalPhaseCleanup
 
+  -- womanOpt <- use stableMatching
+  -- rotationsFound . psWomanOptMatching .= womanOpt
+
 terminalPhaseCleanup :: MatchingMonad m a b => m ()
 terminalPhaseCleanup = do
   (experimentalMatching .=) =<< use stableMatching
@@ -158,11 +210,13 @@ terminalPhaseCleanup = do
   womenAtTopMatch %= \s -> foldr S.insert s vol
   improvingWomen %= \s -> foldr S.delete s vol
   volatileWomen .= []
+  volatileMen .= []
 
 startNewDivorceChain :: MatchingMonad m a b => b -> m ()
 startNewDivorceChain womanZero = do
   volatileWomen .= [womanZero]
   manZero <- use $ experimentalMatching . at womanZero
+  -- volatileMen .= [fromJust manZero] -- should be nonempty as womanZero `elem` improvingWomen
   floatingMan .= manZero -- ^ already wrapped in Just
   experimentalMatching . at womanZero .= Nothing
 
@@ -172,6 +226,7 @@ startNewDivorceChain womanZero = do
     (topWomen, remainingWomen) <- use $ menProposalStatus . ix man
 
     rejectingWomen <- flip takeWhileM topWomen $ \woman -> do
+      -- IMPORTANT: do comparison based on woman's match in stableMatch.
       accepts <- acceptProposalSimple woman man
       proposalsRecieved . ix woman += 1
       return $ not accepts
@@ -192,7 +247,7 @@ womanUpgradesConvert :: MatchingMonad m a b => b -> a -> m ()
 womanUpgradesConvert woman man = do
   (stabWomen, mu) <- (,) <$> use womenAtTopMatch <*> use stableMatching
   if woman `elem` stabWomen || woman `M.notMember` mu
-    then floatingMan .= Nothing -- terminalPhaseCleanup
+    then floatingMan .= Nothing -- trigger terminalPhaseCleanup
 
   else do
     oldMatch <- use $ experimentalMatching . at woman
@@ -205,19 +260,37 @@ womanUpgradesConvert woman man = do
 
     if woman `elem` vol
       then do -- ^ new stable match found (simple improvement cycle)
-        let adjust (as, b:bs) = (b:as, bs)
-            adjust _ = error "not possible as woman `elem` vol"
-            (volImproved,volRemaining) = adjust $ span (/= woman) vol
-        stab <- use stableMatching
-        expImp <- M.filterWithKey (\k _ -> k `elem` volImproved)
-          <$> use experimentalMatching
-        stableMatching .= expImp `M.union` stab
-        shoutMatch
-        volatileWomen .= volRemaining -- ^ empty iff woman == womanZero, as we want!
+        improvementCyclePhase woman man
 
       else do -- continue trying to upgrade
         volatileWomen %= (woman:)
+        -- weird thing: men don't get added to volatile until they find a NEW match;
+        --   where women get upgraded when they reject their old match.
+        volatileMen %= (man:)
 
+improvementCyclePhase :: MatchingMonad m a b => b -> a -> m ()
+improvementCyclePhase woman man = do
+  volWomen <- use volatileWomen
+  let adjust (as, b:bs) = (as++[b], bs)
+      adjust _ = error "not possible as woman `elem` vol"
+      (volImproved,volRemaining) = adjust $ span (/= woman) volWomen
+  stab <- use stableMatching
+  expImp <- M.filterWithKey (\k _ -> k `elem` volImproved)
+    <$> use experimentalMatching
+  stableMatching .= expImp `M.union` stab -- left-biased, i.e. overwrite stab.
+  volatileWomen .= volRemaining -- ^ empty iff woman == womanZero, as we want!
+
+  -- make the corresponding rotation
+  volMen <- use volatileMen
+  let (worsenedMen, volMenRemaining) = splitAt (length volImproved) $ man:volMen
+      worsenedMen' = rotate 1 worsenedMen
+  volatileMen .= drop 1 volMenRemaining
+  -- traceShowM $ ()
+  -- traceShowM $ (man, volMen, woman, volWomen)
+  -- traceShowM $ (drop 1 volMenRemaining, volRemaining)
+  -- traceShowM $ (worsenedMen', volImproved)
+
+  shoutMatch (makeRotation . reverse $ zip worsenedMen' volImproved)
 
 --------------------------------------------------------------------------------
 -- Examples
@@ -261,8 +334,8 @@ doesntReachWosm = MatchingInput {_menPrefs = M.fromList [(1,[4,3,2,1]),(2,[3,1,2
 -- outputs the volatile women and any improving map if it can be found
 -- NOTE: if no improving map is found, the volatile women
 -- have achieved their best possible husband.
--- NOTE: consideredWomen will (hopefull) ``short circuit'' things along -
---   if from those women we already know what happens (successors or otherwise)
+-- NOTE: consideredWomen (womenAtTop ?) will (hopefull) ``short circuit'' things along
+--   - if from those women we already know what happens (successors or otherwise)
 --   we can stop once we get here.
 iic :: (Show a, Show b, Ord a, Ord b)
   => MatchingInput a b -> Map b a -> b -> Set b
@@ -270,7 +343,7 @@ iic :: (Show a, Show b, Ord a, Ord b)
 iic input mu woman womenAtTop
   = adjOut $ runRWS (startNewDivorceChain $ woman) input
     (adjInit $ initialMatchingState input)
-  where adjOut ((), state, (m,v):_) = (Just m, v)
+  where adjOut ((), state, (m,v,_):_) = (Just m, v)
         adjOut ((), state, []) = (Nothing, state^.volatileWomen)
         adjInit i = i & stableMatching .~ mu & experimentalMatching .~ mu
           & womenAtTopMatch .~ womenAtTop -- allWomen S.\\ remainingIICableWomen

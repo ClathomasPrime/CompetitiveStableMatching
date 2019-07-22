@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f2ef8b99bee8f835b549c9fb3585c0ec24302c52aff819033267843ec1e2909d
+-- hash: a2861089ecd21fab1fda23900582c092ec7ad2b6e5f7a13caba593e6ac70583f
 
 name:           competitive-matching
 version:        0.1.0.0
@@ -23,6 +23,7 @@ executable competitive-matching
   other-modules:
       Convert
       Lattice
+      Poset
       Rand
       RandUtils
       Utils
@@ -36,5 +37,6 @@ executable competitive-matching
     , containers
     , lens
     , mtl
+    , pretty-simple
     , random-shuffle
   default-language: Haskell2010

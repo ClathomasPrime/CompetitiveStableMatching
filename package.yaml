@@ -19,6 +19,7 @@ dependencies:
   - random-shuffle
   - mtl
   - bimap
+  - pretty-simple
 
 executables:
   competitive-matching:
