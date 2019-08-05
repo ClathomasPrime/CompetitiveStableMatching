@@ -31,8 +31,8 @@ import Debug.Trace
 instance (Ord a, Ord b, Read a, Read b) => Read (Bimap a b) where
   readsPrec _ str = [(BM.fromList . read $ str, "")]
 
--- read as: (a1,b1), (a2,b2), (a3,b3) ==>
---   man a2 goes from b1 to b2. This holds cyclically.
+-- read as: ... (a1,b1), (a2,b2),... ==>
+--   man a1 goes from b1 to b2. This holds cyclically.
 newtype Rotation a b = Rotation { _getRotation :: [(a,b)] }
   deriving(Show, Read, Eq, Ord)
 makeLenses 'Rotation
@@ -94,11 +94,14 @@ swapGenders :: MatchingInput a b -> MatchingInput b a
 swapGenders (MatchingInput u v) = MatchingInput v u
 
 type MatchingMonad m a b
-  = (Show a, Show b, Ord a, Ord b, MonadState (MatchingState a b) m,
-    MonadReader (MatchingInput a b) m, MonadWriter [(Map b a, [b], Rotation a b)] m)
+  = (Show a, Show b, Ord a, Ord b,
+    MonadState (MatchingState a b) m,
+    MonadReader (MatchingInput a b) m,
+    MonadWriter [(Map b a, [b], Rotation a b)] m)
     -- the writer instance holds the stable matches, and also
-    -- the volatile women when the match was found. admitedly, this is hacky
+    -- the volatile women when the match was found. Admitedly, this is hacky
     -- and just because I want those volatile women for a very specific reason.
+    -- TODO: use a different writer type to avoid quadratic time appends.
 
 --------------------------------------------------------------------------------
 -- Algorithm as in the paper
@@ -119,7 +122,7 @@ mosmToWosmF prefs
 rotationsF :: (Show a, Show b, Ord a, Ord b)
   => MatchingInput a b -> [Rotation a b]
 rotationsF prefs
-  = fmap (\(_,_,v) -> v) . view _3 $ runRWS mosmToWosm
+  = drop 1 $ fmap (\(_,_,v) -> v) . view _3 $ runRWS mosmToWosm
       prefs (initialMatchingState prefs)
 
 
@@ -263,10 +266,10 @@ womanUpgradesConvert woman man = do
         improvementCyclePhase woman man
 
       else do -- continue trying to upgrade
+        volatileMen %= (man:)
         volatileWomen %= (woman:)
         -- weird thing: men don't get added to volatile until they find a NEW match;
         --   where women get upgraded when they reject their old match.
-        volatileMen %= (man:)
 
 improvementCyclePhase :: MatchingMonad m a b => b -> a -> m ()
 improvementCyclePhase woman man = do
@@ -283,14 +286,14 @@ improvementCyclePhase woman man = do
   -- make the corresponding rotation
   volMen <- use volatileMen
   let (worsenedMen, volMenRemaining) = splitAt (length volImproved) $ man:volMen
-      worsenedMen' = rotate 1 worsenedMen
+      -- worsenedMen' = rotate 1 worsenedMen
   volatileMen .= drop 1 volMenRemaining
   -- traceShowM $ ()
   -- traceShowM $ (man, volMen, woman, volWomen)
   -- traceShowM $ (drop 1 volMenRemaining, volRemaining)
   -- traceShowM $ (worsenedMen', volImproved)
 
-  shoutMatch (makeRotation . reverse $ zip worsenedMen' volImproved)
+  shoutMatch (makeRotation . reverse $ zip worsenedMen volImproved)
 
 --------------------------------------------------------------------------------
 -- Examples
