@@ -1,0 +1,206 @@
+\documentclass[12pt]{article}
+
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry} 
+\usepackage{comment}
+\usepackage{amsmath,amsthm,amssymb}
+% \usepackage[vlined,linesnumbered,ruled,resetcount]{algorithm2e}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\val}{val}
+\DeclareMathOperator*{\best}{best}
+\DeclareMathOperator*{\worst}{worst}
+
+\usepackage{algorithm}
+% \usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rgz}{\mathbb{R}_{\ge 0}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\newcommand{\Es}[2]{\mathbb{E}_{#1}\left[{#2}\right]}
+\newcommand{\E}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\ip}[2]{\left\langle{#1} , {#2}\right\rangle}
+
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{claim}[definition]{Claim}
+
+\begin{document}
+
+% \renewcommand{\qedsymbol}{\filledbox}
+ 
+\title{Mechanism Design Notes}
+\author{Clay Thomas\\
+claytont@princeton.edu}
+\maketitle
+
+\clearpage
+\section{Regret Minimization and Correlated Equilibrium Concepts}
+
+Consider the following online learning problem:
+There is a set of actions $A$, $|A| = n$. For each time step $t=1,\ldots,T$,
+the decision maker picks a distribution on actions $p^t$.
+Afterwards, a cost vector $c^t : A\to [0,1]$ is selected
+(in any way - even by an adversary who can see $p^t$ before it picks $c^t$)
+and the decision maker ``incurs cost'' $\Es{a\sim p^t}{c^t(a)} = \ip{p^t}{c^t}$.
+Additionally, the decision maker learns the vector $c^t$.
+The goal is to minimize the sum of the costs $\Es{a\sim p^t}{c^t(a)}$.
+
+\[ \sum_{t=1}^T \min_a c^t(a) \]
+Can we hope to achieve something approximating this?
+Not quite: an adversary who can first look at $p^t$ can, for example,
+make all costs very high, except the one with smallest probability in $p^t$.
+A more realistic goal is to compare our cost to the following:
+\[ \min_a \sum_{t=1}^T c^t(a) \]
+Intuitively, ``the cost of the best action which, in hindsight, we could've
+always taken''.
+
+This leads us to define the \emph{regret} of our learning algorithm as
+\[ \Es{a^t\sim p^t, t=1,\ldots,T}{\sum_{t=1}^T c^t(a)} - \min_a \sum_{t=1}^T c^t(a) 
+  = {\sum_{t=1}^T \ip{p^t}{c^t}} - \min_a \sum_{t=1}^T c^t(a) 
+\]
+
+It turns out there is a simple algorithm that achieves low regret.
+\begin{algorithm}
+  \begin{algorithmic}[0]
+  \State \textbf{Parameters:} $\epsilon > 0$, $T$
+  \State Initialize $w^1(a) = 1$ for each $a\in A$
+  \For {$t=1,\ldots,T$}
+    \State Choose action $a\in A$ according to distribution $p^t$ proportional to $w^t$
+    \State \qquad i.e. let $p^t(a) = w^t(a) / \Phi^t$ where
+      $\Phi^t = \sum_{a\in A} w^t(a)$
+    \State Observe costs $c^t$ and update weights as follows for each $a\in A$:
+    \State \qquad $w^{t+1}(a) = w^t(a) (1 - \epsilon)^{c^t(a)}$.
+  \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\begin{theorem}
+  Let $OPT = \min_a \sum_{t=1}^T c^t(a)$.
+  If we set $\epsilon = \sqrt{\log n/T}$, then after $T$ rounds the total realized
+  cost of the multiplicative weights algorithm is $OPT + O(\sqrt{T\log n})$.
+\end{theorem}
+\begin{proof}
+  The proof follows two observations.
+  First, if the decision maker makes a bad move
+  (i.e. the weight of costly moves is high) then lots of total weight is lost.
+  Second, the best action in hindsight contributes has weight
+  $(1-\epsilon)^{OPT}$ at time $T$.
+  Intuitively, this says that the only way for the decision maker to have many 
+  bad moves is if every action was very bad.
+
+  For the formal proof, start by bounding $\Phi^{t+1}$ in terms of $\Phi^t$.
+  In what follows, almost all of the inequalities are standard approximations,
+  which can be proved using Taylor series or other estimations.
+  This is somewhat interesting, and basically just happens because $\epsilon$ is
+  so small we can go back and forth between exponentiation and addition really
+  easily. In a sense, this was exactly the property we needed for our
+  multiplicative weights to produce a low additive cost measure.
+  Denote by $\ell^t = \Es{a\sim p^t}{c^t(a)}$ be the realized cost at time $t$.
+  \begin{align*}
+    \Phi^{t+1}
+      & = \sum_a w^t(a)(1 - \epsilon)^{c^t(a)} \\
+      & \le \sum_a w^t(a)(1 - \epsilon c^t(a)) \\
+      & = \sum_a w^t(a) - \Phi^t \epsilon \sum_a \frac{w^t(a)}{\Phi^t} c^t(a) \\
+      & = \Phi^t \left( 1 -\epsilon \sum_a p^t(a) c^t(a) \right) \\
+      & = \Phi^t \left( 1 -\epsilon \ell^t \right) \\
+  \end{align*}
+  Now we can relate $\Phi^T$ to the total loss $L = \sum_{t=1}^T \ell^t$:
+  \begin{align*}
+    \Phi^T
+      & = \Phi^0 \prod_{t=1}^T \left( 1 -\epsilon \ell^t \right) \\
+      & \le n \prod_{t=1}^T \exp\left(-\epsilon \ell^t \right) \\
+      & = n \exp\left(-\epsilon \sum_{t=1}^T \ell^t \right) \\
+      & = n \exp\left(-\epsilon L\right) \\
+  \end{align*}
+
+  On the other hand, for any action $a\in A$ we have
+  \[ (1-\epsilon)^{OPT} \le w^T(a) < \Phi^T \le n\exp(-\epsilon L) \]
+  \[ OPT(-\epsilon - \epsilon^2/2) \le OPT\log(1 - \epsilon) 
+    \le \log n - \epsilon L \]
+  \begin{align*} 
+    L & \le OPT + ({\epsilon}/{2}) OPT + \frac{\log n}{\epsilon} \\
+      & \le OPT + (\sqrt{\log n/T}/{2}) T + \frac{\log n}{\sqrt{\log n/T}} \\
+      & = OPT + \frac{3}{2} \sqrt{T\log n}
+  \end{align*}
+
+\end{proof}
+
+Following experts online sounds great and all, but how is this actually useful
+for proving theorems? Often time we are interested in the \emph{time averaged}
+cost incurred, typically because that allows us to combine all of the
+distributions $p^t$ into a distribution which is ``close to optimal'' in some
+sense. The following restatement tells you ``how long you need to go'' to get
+additive error $\epsilon$.
+
+\begin{corollary}
+  For any $\epsilon > 0$, if we run for $T = O(\log n / \epsilon^2)$ steps,
+  multiplicative weights will have average regret $\epsilon$.
+\end{corollary}
+
+
+
+
+
+
+
+
+  \subsection{Swap regret}
+
+  The first idea is to run several independent instances of low regret
+  algorithm. We'll kind of see that each instance will correspond to a different
+  action. However, perhaps the best way to see why this definition works comes
+  out in the analysis: we need to align the sum of the costs incurred to the
+  individual instances with the swap regret.
+
+  Here's a description of the algorithm:
+  Run independent instances of the multiplicative weights algorithm (or any
+  low-regret online learning algorithm) $M_j$ for $j=1,\ldots,n = |A|$.
+  At each time $t$, the algorithm:
+  \begin{itemize}
+    \item asks each learner for a distribution $q_j^t$ over actions
+    \item calculates $p^t = P(q_1^t,\ldots,q_n^t)$ using some subroutine $P$,
+      and acts according to $p^t$
+    \item observes ``real'' cost $c^t$, but tells each learner $M_j$ that the
+      cost incurred to $M_j$ is $p^t(j)c^t$
+  \end{itemize}
+
+  Individually, it is a bit difficult to interpret what each $M_j$ is trying to
+  minimize: it's like $M_j$ gets punished, but only if the action he is
+  associated with is likely played. Collectively, all the $M_j$s are trying to
+  minimize $\sum_j p^t(j) c^t = c^t$, so at least that aligns with what we want.
+
+  More formally, the algorithm looks like this:
+  \begin{algorithm}
+    \begin{algorithmic}[0]
+    \State \textbf{Parameters:} $\epsilon > 0$, $T$
+    \State Initialize $w^1_j(a) = 1$ for each $a\in A$ and $j=1,\ldots,n$
+    \For {$t=1,\ldots,T$}
+      \For {$j=1,\ldots,n$}
+        \State Define a distribution $q_j^t$ proportional to $w_j^t$
+      \EndFor
+      \State Let $p^t = P(q^t_1,\ldots,q^t_n)$, and 
+        draw an action according to $p^t$
+      % \State Define $p^t$ as follows: $p^t$ is any stationary distribution of
+      %   the Mark chain whose states 
+      % \State \qquad are actions $j\in A$ and whose transition
+      %   probabilities from $j$ to each $i\in A$ are $q_j^t(i)$
+      \State Observe costs $c^t$
+      \For {$j=1,\ldots,n$}
+        \State Update weights $w^{t+1}_j(a) = w^t_j(a) (1 - \epsilon)^{p^t(j) c^t(a)}$
+      \EndFor
+    \EndFor
+  \end{algorithmic}
+  \end{algorithm}
+
+  Let's dive into the analysis, during which we'll finally specify $P$:
+

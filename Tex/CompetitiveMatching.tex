@@ -1,0 +1,891 @@
+\documentclass[12pt]{article}
+
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry} 
+\usepackage{comment}
+\usepackage{amsmath,amsthm,amssymb}
+\usepackage{hyperref}
+% \usepackage[vlined,linesnumbered,ruled,resetcount]{algorithm2e}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\val}{val}
+\DeclareMathOperator*{\MOSM}{MOSM}
+\DeclareMathOperator*{\WOSM}{WOSM}
+\DeclareMathOperator*{\best}{best}
+\DeclareMathOperator*{\worst}{worst}
+
+\usepackage{algorithm}
+% \usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rgz}{\mathbb{R}_{\ge 0}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\newcommand{\Es}[2]{\mathbb{E}_{#1}\left[{#2}\right]}
+\newcommand{\E}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\ip}[2]{\left\langle{#1} , {#2}\right\rangle}
+
+\newcommand{\M}{\mathcal{M}}
+\newcommand{\W}{\mathcal{W}}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{claim}[definition]{Claim}
+\newtheorem{proposition}[definition]{Proposition}
+
+\begin{document}
+
+% \renewcommand{\qedsymbol}{\filledbox}
+ 
+\title{Competition in Matching Markets:\\
+The Short-Side Advantage}
+\author{Clay Thomas\\
+claytont@princeton.edu}
+\maketitle
+
+\section{Introduction}
+
+  Stable matching mechanisms are ubiquitous in theory and in practice,
+  especially in the ``bipartite case'' where agents lie in two disjoint groups
+  and matches are made between members of different groups.
+  % Stable matchings present one of the rare examples in mechanism design without
+  % money where many positive results are possible.
+  The most commonly used stable matching mechanism is ``one-side proposing
+  differed acceptance'', which has the nice properties of being simple to
+  implement, fast to execute, and strategyproof for the proposing side
+  \cite{DubinsMachiavelliGaleShapley81}
+  (moreover, it is the unique mechanism satisfying strategyproofness for 
+  one of the sides \cite{GaleMsMachiavelli85}).
+
+  Many structural properties are known about the set of stable matches for a
+  given instance (known as the \emph{core} of the instance).
+  For instance, the core forms a distributive lattice with a compact
+  (and algorithmically friendly) representation,
+  and every distributive lattice is the core of some ``not too large''
+  stable marriage instance \cite{IrvingCountingStable86}.
+  This latter fact means that, a priori, one cannot say much more
+  about the core than one can say about arbitrary distributive
+  lattices\footnote{
+    One recent result which runs counter to this statement is given in
+    \cite{KarlinExpUBNumberStable18}, where the authors use the 
+    size of the stable marriage instance to
+    bound the number of elements in the distributive lattice of the core.
+    There, the exact meaning of the words ``not too large'' becomes important.
+  }. However, in addition to the structure that the core must necessarily have,
+  it is very interesting to know what qualities the core \emph{probably} has.
+
+  The ``first'' randomized model of stable matching is to take preferences
+  completely uniform for each agent.
+  For a while, it's been known that in a randomized balanced market,
+  i.e. one with the same
+  number of agents on each side, there's probably a large core
+  and a big imbalance between the different sides -- the proposing side gets
+  matched which they favor significantly more \cite{PittelAverageStable89}.
+  However, in a recent breakthrough paper \cite{AshlagiUnbalancedCompetition17},
+  it was found that this distinction
+  \emph{almost vanishes} in large markets when there is an imbalance of just
+  \emph{one} more agents on one side than the other.
+  In this note we survey this result.
+
+  \paragraph{Organization.}
+  In section 2, we review the basic properties of differed acceptance and stable
+  matchings, which will motivate some of the techniques to come.
+  In section 3, we review the case of a balanced market, and discuss which parts
+  of the analysis fail for unbalance markets.
+  In section 4, we prove some results on unbalanced markets, taking a new proof
+  approach based around differed acceptance which is closer to the analysis for
+  the balanced market.
+  In section 5, we discuss the proof technique given in
+  \cite{AshlagiUnbalancedCompetition17}.
+  % and describe its relationship to algorithms previously known about the
+  % structure of the core (from \cite{GusfieldStableStructureAlgs89}).
+
+\section{Review: Differed Acceptance and Stable Matching}
+
+  The basic setup of stable matching has many variations.
+  The central focus of this note is the setting with an unequal number of agents
+  on each side.
+  Some other import variations include adding ``unacceptable matches'' (agents do not
+  rank every agent on the other side), ``indifference'' (agents sometimes don't
+  distinguish their preference between some matches), ``many-to-one matchings''
+  (where several agents from one side are matched to one on the other),
+  and ``couples'' (where certain agents on one side express their 
+  preferences/acceptable matches jointly).
+  We use the ``unacceptable matches'' concept as a technical tool,
+  but ignore the subtleties of the other variations.
+
+  \begin{definition}
+    A matching market is a collection $\M$ of ``men'' and $\W$ of ``women'', where
+    each man $m\in \M$ has a ranking (strict total order) denoted $\succ_m$ 
+    over women $w\in \W$, and vice-versa.
+    If an agent $i$ ``deems a match to $j$ unacceptable'', i.e. they would rather
+    go unmatched than be matched to $j$, then we denote this by 
+    $\emptyset \succ_i j$.
+
+    A matching is a one-to-one assignment of men to women, which we denote
+    by $\mu : \M\cup \W\to \M\cup \W\cup\{\emptyset\}$, such that all the reasonable
+    conditions are met to make it a matching. We write $\mu(i) = \emptyset$ if
+    agent $i$ is unmatched.
+
+    A matching $\mu$ is \emph{stable} for a set of preferences 
+    $P = \{\succ_w\}_{w\in\W} \cup \{\succ_m\}_{m\in\M}$
+    if no unmatched man/woman pair 
+    $(m,w)\in \M\times \W$ is blocking under $P$,
+    % we do not simultaneously have
+    % $m \succ_w \mu(w)$ and $w \succ_m \mu(w)$.
+    where $(m,w)$ is called blocking if we simultaneously have
+    $m \succ_w \mu(w)$ and $w \succ_m \mu(w)$.
+    A \emph{pair} $(m,w)$ is called stable under $P$ if $\mu(m)=w$ in 
+    \emph{some} stable matching,
+    and $m$ is called a stable partner of $w$ (and vice-versa).
+
+    % The differed acceptance algorithm runs as follows: while there are unmatched
+    % doctors, pick one of them (in some order) and have them ``propose'' to their
+    % highest ranked hospital which they have not yet proposed to.
+    % If that hospital is unmatched, they will tentatively accept the doctor.
+    % If that hospital is matched, but they prefer their current match, then
+    % $d$ remains unmatched. 
+    % If that hospital is matched, and they prefer $d$ to their current match,
+    % then the hospital tentatively accepts $d$ and the old match becomes unmatched.
+  \end{definition}
+
+  The man-proposing differed acceptance algorithm is given by
+  Algorithm~\ref{algoMPDA}. We provide simple proof of the basic properties of
+  this algorithm.
+
+  \begin{algorithm}
+    \caption{MPDA: Men-proposing differed acceptance algorithm}
+    \label{algoMPDA}
+  \begin{algorithmic}[0]
+    \State Let $U = \M$ be the set of unmatched men
+    \State Let $\mu$ be an all empty matching
+    \While { $U\ne \emptyset$ and some $m\in U$ has not proposed to every woman }
+      \State Pick such a $m$ (in any order)
+      \State $m$ ``proposes'' to their highest-ranked woman $w$ which 
+        they have not yet proposed to
+      \If {$m \succ_w \mu(w)$} 
+        \State If $\mu(w)\ne \emptyset$, add $\mu(w)$ to $U$
+        \State Set $\mu(w) = m$, remove $m$ from $U$ 
+      % \EndIf
+      % \If {$\mu(h) = d_0$ and $d\succ_h d_0$} 
+      %   \State Set $\mu(h) = d$, remove $d$ from $U$, add $d_0$ to $U$
+      % \Else \ \ $h$ remains matched to $d_0$ and $d$ remains in $U$
+      \EndIf
+    \EndWhile
+  \end{algorithmic}
+  \end{algorithm}
+
+  \begin{claim}
+    The MPDA algorithm terminates.
+  \end{claim}
+  \begin{proof}
+    Every man will propose to every woman at most once.
+  \end{proof}
+
+  Intuitively, this algorithm starts with the men doing whatever they prefer
+  the most, then doing the minimal amount of work to make the matching stable.
+  Indeed, men propose in their order of preference. If a woman $w$ ever
+  rejected a man $m$ they prefer over their current match,
+  then \emph{remained} with their current match,
+  then $(m,w)$ would clearly create an instability in the final matching.
+
+  \begin{claim}
+    The output of MPDA is a stable matching.
+  \end{claim}
+  \begin{proof}
+    Consider a pair $m\in \M$, $w\in \W$ which is unmatched in the output matching
+    $\mu$. Suppose for contradiction $w\succ_m \mu(m)$ and $m\succ_w \mu(w)$.
+    Well, in the MPDA algorithm, $m$ would propose to $w$ before $\mu(m)$.
+    However, it's easy to observe that once a woman is proposed to,
+    they remains matched and can only increase their preference for their match.
+    This contradicts the fact that $w$ was eventually matched to $\mu(w)$.
+  \end{proof}
+
+  Note that this algorithm gives us a very interesting existence result: it was
+  not at all clear that stable matching existed before we had this algorithm.
+
+  This next claim allow us to easily prove several corollaries.
+  The proof follows this strategy: although it's not immediately easy to show an
+  event can't happen, you can show it \emph{can't happen for the first time}.
+
+  \begin{claim}\label{claimRejectionUnstable}
+    If a man $m\in \M$ is ever rejected by a woman $w\in \W$ during some run
+    of MPDA (that is, $m$ proposes to $w$ and $w$ does not accept) then no stable
+    matching can pair $m$ to $w$.
+  \end{claim}
+  \begin{proof}
+    Let $\mu$ be any matching, not necessarily stable. We will show that if $w$
+    rejects $\mu(w)$ at any step of MPDA, then $\mu$ is not stable.
+
+    Suppose that some pair, matched in $\mu$, is rejected during MPDA.
+    Consider the first time during in the run of MPDA where such a rejection
+    occurs, i.e. a woman $w$ rejects $\mu(w)$ but no other woman $w'$ has
+    rejected $\mu(w')$ so far.
+    In particular, let $w$ reject $m=\mu(w)$ in favor of $m'\ne m$
+    (either because $m'$ proposed to $w$,
+    or because $m'$ was already matched to $w$ and $m$ proposed).
+    We have $m'\succ_w m$.
+    We have $\mu(m')\ne w$, simply because $\mu$ is a matching.
+    Because this is the first time any man has been rejected by a match from
+    $\mu$, $m'$ has not yet proposed to $\mu(m')$.
+    Because men propose in their preference order, we have $w \succ_{m'} \mu(m')$.
+    However, this means $\mu$ is not stable.
+
+    Thus, no woman can ever reject a stable partner in MPDA.
+  \end{proof}
+
+  We can now formalize our intuition that DA moves the men down their preference
+  lists the minimal amount required to enforce stability.
+
+  \begin{corollary}
+    Let $\best(m)$ denote the most preferred match $m$ can achieve in any stable
+    matching, i.e. the maximum according to $\succ_m$ of the set
+    $\{w\in \W: \exists \mu:\text{$\mu$ is stable and $\mu(m)=w$}\}$
+    (or write $\best(m)=\emptyset$ if the above set is empty).
+
+    In the match returned by MPDA, every $m\in \M$ is paired to $\best(m)$.
+  \end{corollary}
+
+  A completely dual phenomenon occurs for the women's preferences:
+  \begin{claim}\label{claimWomenWorstStable}
+    In the match returned by MPDA, every $w\in \W$ is paired to their worst stable
+    match in $\M$.
+  \end{claim}
+  \begin{proof}
+    Let $m\in \M$ and $w\in \W$ be paired by MPDA.
+    Let $\mu$ be any stable matching which does not pair $m$ and $w$.
+    We must have $w \succ_m \mu(m)$, because $w=\best(m)$.
+    If $m \succ_w \mu(w)$, then $\mu$ is not stable.
+    Thus, $w$ cannot be stably matched to any man she prefers less than $m$.
+  \end{proof}
+
+  We also get this reassuring fact:
+  \begin{corollary}
+    The matching output by the MPDA algorithm is independent of the order in which
+    men are selected to propose.
+  \end{corollary}
+
+
+  % NOTE:: MAYBE TRY TO IMPROVE THIS TO HOLD MORE GENERALLY::
+  % AT BARE MINIMUM FIX THE USAGE OF DOCTOR!!
+  % THIS RURAL HOSPITAL BUSINESS IS IMPORTANTE!!
+  Using our results so far, we can prove the following weaker version of the rural
+  hospital theorem\footnote{
+    The full rural hospital theorem \cite{RothRuralHospital86} 
+    is stronger in two ways.
+    First, the assumption of full-length preference lists is dropped.
+    Second, many-to-one matching markets are considered (i.e. several doctors can be
+    matched to one hospital), and the conclusion is that if a hospital does not
+    fill \emph{all} its openings in \emph{some} stable outcome,
+    then it will always recieve the same doctors
+    (and same number of openings slots) in \emph{every} stable outcome.
+  }:
+  \begin{claim}[Rural Hospital Theorem] \label{claimRuralDoctors}
+    Suppose preference lists are full length, that is, every agent ranks every other
+    agent and prefers any match to being unmatched.
+    Then the set of unmatched agents will be the same in every stable outcome.
+    % If a set of men $\overline \M$ are rejected by every woman during MPDA,
+    % then no stable matching will match any man in $\overline \M$.
+    % Moreover, in every stable matching, the set of unmatched men is the same.
+  \end{claim}
+  \begin{proof}
+    Suppose without loss of generality that $|\M|>|\W|$.
+    Let $\overline \M$ be unmatched in MPDA,
+    and $\overline \M'$ unmatched in some other stable matching $\mu$.
+    The men in $\overline \M$ are exactly those that are rejected by every woman
+    in MPDA, so $\overline \M\subseteq \overline \M'$ by
+    claim~\ref{claimRejectionUnstable}.
+    Because full length preference lists are used, every stable matching must be
+    maximal (because any pair of unmatched agents will be blocking).
+    Thus $\M$ and $\M'$ must be the same size, and thus they are equal.
+  \end{proof}
+
+  % \begin{claim}
+  %   The set of unmatched women is the same in any stable matching.
+  % \end{claim}
+  % \begin{proof}
+  %   Women-proposing DA (i.e. simply interchanging the roles of the men and the
+  %   women in algorithm~\ref{algoMPDA})
+  %   also produces a stable matching, so this simply follows
+  %   from claim~\ref{claimRuralDoctors}.
+  % \end{proof}
+
+  % To strengthen the power of our solution concept further,
+  % we can also compare stable matching to arbitrary matchings.
+  % \begin{claim}\label{claimBetterThanAllMatchings}
+  %   Let $\mu$ be men-proposing DA matching, and let $\mu'$ be an arbitrary
+  %   matching, $\mu\ne\mu'$.
+  %   Then it is not possible for every man to prefer their match in
+  %   $\mu'$ over their match in $\mu$.
+  % \end{claim}
+  % \begin{proof}[Proof Sketch?].
+  %   Suppose for contradiction that $\mu'(d) \ge_d \mu(d)$ for every $d\in D$.
+  %   Then every doctor will propose to $\mu'(d)$ before $\mu(d)$.
+  %   Now, because DA is independent of execution order, we can find an execution
+  %   where every doctor $d$ is tentatively accepted by $\mu'(d)$.
+  %   In particular, no doctor is currently unmatched,
+  %   so actually, DA will halt and return the matching $\mu'$.
+  % \end{proof}
+
+  \paragraph{}
+
+  The collection of stable matchings satisfies very strong ``lattice
+  properties'' giving a lot of useful structure.
+  % The following hints at a ``lattice property'' of stable matchings:
+  Here we will only use a few of the basic consequences of this.
+
+  First off, in order for one side to benefit, the other side must be worst off:
+  \begin{claim}
+    Let $\mu, \mu'$ be stable matchings, and say $\mu(m) = w$, but $\mu'(m)\ne w$.
+    Then $\mu'(m) \succ_m w$ if and only if $\mu'(w) \prec_w m$.
+  \end{claim}
+  \begin{proof}
+    $(\Leftarrow)$ ``If $w$ downgrades, then $m$ upgrades''.
+    Suppose $\mu'(w) \prec_w m$. Because $\mu'$ is stable, yet $m$ and $w$
+    are not matched in $\mu'$, we must have $\mu'(m) \succ_m w$,
+    or else $(m,w)$ would form a blocking pair.
+    (A rephrasing: this direction is easy because the definition of stability
+    immediately makes it impossible for $m$ and $w$ to both downgrade).
+
+    $(\Rightarrow)$ ``If $w$ upgrades, then $m$ downgrades''.
+    Let $m' = \mu'(w) \ne m$ and $w' = \mu'(m) \ne w$.
+    Suppose that $m' \succ_w m$, and for contradiction suppose that $w' \succ_m w$.
+    Because $\mu'$ is stable, $(m', w')$ is not a blocking pair,
+    so either $w\succ_{m'} w'$ or $m\succ_{w'} m'$.
+    In the first case, $(m',w)$ form a blocking pair in $\mu$,
+    and in the second case, $(m,w')$ form a blocking pair in $\mu$.
+    Thus, in either case $\mu$ is not stable.
+
+    % we cannot have $h' >_{d'} h$
+    % and $d' >_{h'} d$ simultaneously, so either $h >_{d'} h'$ or $d >_{h'} d'$.
+    % But if $h >_{d'} h'$, then $(h,d')$ is a blocking pair in $\mu'$,
+    % and if $d >_{h'} d'$, then $(h',d)$ is a blocking pair in $\mu'$.
+
+    % For contradiction, suppose $\mu'(d) >_d h$ as well. 
+  \end{proof}
+
+% \section{Definitions}
+  % 
+  % 
+  % A matching $\mu$ is a maximal collection of disjoint pairs of one man and one woman
+  % (because we assume each man ranks each woman and vice versa, the matching
+  % is always maximal).
+  % Denote the match of an agent $a$ by $\mu(a)$,
+  % and write $\mu(a) = \emptyset$ if $a$ is unmatched in $\mu$.
+  % 
+  % $\mu = WOSM(M)$ and $\mu' = MOSM(M)$;
+  % $R_{men}$ and $R_{women}$
+
+
+\section{Balanced Random Markets}
+
+  For a man $m$ and woman $w$ in some preference set $P$,
+  define $R_m(w) := |\{w' : w' \succeq_m w\}|$,
+  i.e. the number of women preferred at least as much as $w$,
+  i.e. the index of $w$ on $m$'s ordered preference list.
+  We will say that $m$ ranks $w$ better than $w'$ when $R_m(w) < R_m(w')$.
+  Given a matching $\mu$ stable under preferences $P$,
+  define 
+  \[ R_{men}(\mu) := \frac{1}{|\M\setminus\overline\M|}
+    \sum_{m\in \M\setminus\overline\M} R_m(\mu(m))
+  \]
+  That is, $R_{men}(\mu)$ is the average over matched men of the men's rank of
+  their wives. Define $R_w(m)$ and $R_{women}(\mu)$ analogously.
+
+  A random matching market is defined by a set of randomly draw preferences
+  $P = P_{n,m}$ with $n$ men and $m$ women,
+  where each of the $n$ men with uniformly random rankings over the $m$ women,
+  and $m$ women with uniformly random rankings over the $n$ men.
+  Given a set of preferences $P$, let $MOSM(P)$ denote the man-optimal stable
+  outcome, i.e. the result of running MPDA (men-proposing differed acceptance).
+  Likewise, let $WOSM(P)$ denote the woman-optimal stable
+  outcome, i.e. the result of running women-proposing differed acceptance.
+
+  The crucial observations to dealing with MPDA are the following:
+  \begin{itemize}
+    \item The sum of the ranks that the men have for their wives
+      in the MOSM is exactly the number of proposals made during MPDA.
+    \item When $n\le m$, MPDA terminates as soon as $n$ distinct women are
+      proposed to. Thus, the sum of ranks of the men is essentially a
+      \emph{coupon collector} random variable, with expectation $O(\log n)$.
+  \end{itemize}
+
+  \begin{proposition}
+    Let $P$ be a random matching market with $n$ men and $n+k$ women for $k\ge 0$.
+    Then $\E{R_{men}(MOSM(P))}
+    = O(\left(\frac{n+k} n\right)\log\left(\frac{n+k}{k}\right))$.
+    % and $\E{R_{women}(MOSM(P))} = \Omega(n/\log n)$.
+  \end{proposition}
+  \begin{proof}
+    Consider running men-proposing differed acceptance on $M$.
+    At the steps requiring some unmatched man to be selected,
+    select one uniformly at random.
+    Let $Y$ denote the random variable giving the total number of proposals made
+    by men to women.
+    By the so-called ``principle of differed decisions'', running this algorithm
+    on a random matching market is equivalent to running the following
+    randomized algorithm:
+    women's preferences are taken as input, but men's are not, and
+    whenever a man is ready to propose to a woman, simply select a woman he hasn't
+    yet proposed to uniformly at random.
+
+    Let $Z$ denote a ``coupon collector'' random variable defined by the
+    following random process: at each step, a uniformly random number in $[n+k]$
+    is drawn, and $Z$ returns the number of steps needed for $n$ distinct
+    numbers to be draw.
+    Note that $Z$ statistically dominates $Y$, because every time a man proposes
+    to a woman, he is at least as likely to propose to an unmatched woman as the
+    coupon collect step is to select an unselected outcome.
+
+    Now, we have $Z = \sum_{i=1}^n Z_i$, where $Z_i$ is the number of steps
+    needed before the $i$th distinct number is draw.
+    Observe that $Z_i$ is a geometric random variable with success probability
+    $\frac{n+k-i} {n+k}$. Thus:
+    \begin{align*}
+      \E{Y} & \le \E{Z} \\
+        & = \sum_{i=1}^n \E{Z_i} \\
+        & = \sum_{i=1}^n \frac{n+k}{n+k-i} \\
+        & = (n+k) \sum_{i=k}^{n+k} \frac{1}{i} \\
+        & = (n+k)[H_{n+k} - H_k]  \\
+        & = \Theta\left( (n+k)[\log(n+k) - \log(k)] \right)  \\
+    \end{align*}
+    Which gives exactly the desired bound on 
+    $\E{R_{men}(MOSM(P))} = \E{Y / n}$.
+  \end{proof}
+
+  We can use the above claim to get an informal handle on the expectation
+  of $R_{women}(MOSM(P))$ as well.
+  In expectation, $O\left((n+k)\log\left(\frac{n+k}{k}\right)\right)$
+  proposals are made, so any
+  fixed woman $w$ receives an average of
+  $O\left(\log\left(\frac{n+k}{k}\right)\right)$ proposals.
+  The rank of the men proposing to $w$ is essentially uniformly distributed 
+  on $[n]$. The minimum of $h$ uniformly distributed random variables with
+  expectation $x$ has expectation $x/h$.
+  Thus, the best-ranked man proposing to $w$ has rank
+  $\Omega\left(n / \log\left(\frac{n+k}{k}\right) \right)$ on average.
+
+  The previous paragraph can be made formal. A sequence of classical works 
+  (in order, \cite{WilsonAnalysisStable72}, \cite{KnuthStableCombinatorial97},
+  \cite{PittelAverageStable89}, \cite{PittelLikelyStable92}) got
+  quite a good handle on the asymptotic behavior of balanced matching markets.
+  Performing a full analysis can get quite complicated, especially when counting
+  the \emph{number} of distinct stable matchings\footnote{ 
+    This is likely one reason that 
+    \cite{AshlagiUnbalancedCompetition17} uses different statistics to measure the
+    size of the core, namely, the fraction of agents with multiple distinct
+    partners. For many applications, such as the strategic implication of the
+    size of the core, this is the more important statistic anyway.
+  }.
+
+  % In ((PITEL)), the author gives a much more detailed analysis in order to prove
+  % an upper bound on the expected total number of distinct stable matchings.
+
+\section{Unbalanced Random Markets: One Exposition}
+
+  With a little effort, you can extend coupon-collector type arguments to
+  get results in the unbalanced case.
+  This next claim is adapted from \cite{ImmorlicaHonestyStability05}:
+  \begin{claim}
+    Consider some matching market $P$ (i.e. a set of preferences
+    for men and women) and fix a woman $w^*$ who is matched under any some
+    stable matching for $P$.
+    Construct preference sets $P_n, P_{n-1}, \ldots, P_1$
+    where in $P_i$ we have $w^*$ ``truncate her list'' after place $i$,
+    that is, $w^*$ reports her top $i$ choices and deems all other matches
+    unacceptable. Let $m_i$ denote the match of $w^*$
+    under $MPDA(P_i)$ (or write $m_i = \emptyset$ if $w^*$ is unmatched)
+    and let $L = (m_n, m_{n-1}, \ldots, m_1)$.
+
+    We have the following:
+    \begin{enumerate}
+      \item For each $i$, $\mu_i$ is a stable matching for $P_i$
+        with $\mu_i(w^*)\ne \emptyset$
+        if and only if $\mu_i$ is a stable matching for $P$.
+        % then $\mu_i$ is a stable matching for $P$ if and only if
+        % $\mu_i(w^*) \ne \emptyset$.
+      \item $L$ is a list containing all the stable matches of $w$,
+        possibly with repetition and possibly terminating in a string of
+        $\emptyset$s (which do not represent stable matches).
+      \item $L$ is ranked from worst to best according to $\prec_w$.
+    \end{enumerate}
+  \end{claim}
+  \begin{proof}
+    (1, $\Rightarrow$) If $\mu_i(w^*) = \emptyset$, then we immediately know that
+    $\mu_i$ is not stable for $P$, by the rural hospital theorem
+    (claim~\ref{claimRuralDoctors} suffices).
+    Also, if $\mu_i$ is not stable for $P_i$, then any blocking pair in $P_i$ 
+    will also be a blocking pair in $\mu_i$, so $\mu_i$ will not be stable for $P$.
+
+    (1, $\Leftarrow$) Suppose $w^*$ is matched in $\mu_i$,
+    and suppose for contradiction that $(m,w)$ is a blocking pair for $\mu_i$
+    under $P$. All agents have identical preferences in $P$ and $P_i$ except for
+    $w^*$, so we must have $w = w^*$. But because $w^*$ is matched under
+    $P_i$, we know $m \succ_{w^*} \mu_i(w^*)$ if and only if
+    $m \succ_{w^*}^{(i)} \mu_i(w^*)$ (where $\succ_{w^*}^{(i)}$ denotes $w^*$'s
+    preferences in $P_i$). Thus, $(m,w)$ is also blocking for $\mu_i$
+    under $P_i$, a contradiction.
+
+    (2, 3) As in the case of full-length preference lists, $MPDA(P_i)$
+    will return a stable matching for $P_i$, and it will assign $w^*$ to the
+    worst stable partner $w^*$ has under preferences $P_i$, provided one exists.
+    By part 1, the stable partners of $w^*$ under $P_i$ are exactly the stable
+    partners of $w^*$ under $P$ which are ranked better than place $i$.
+
+    Now, induct on $j$, with the inductive hypothesis being that
+    $(m_n, m_{n-1}, \ldots, m_{j})$ contains all stable partners ranked above
+    $j$ by woman $w^*$ (in order according to $\prec_{w^*}$).
+    The base case is simply the fact that $m_n$ is the worst stable partner of
+    $w^*$ (claim~\ref{claimWomenWorstStable}).
+    Now, for the inductive step, we have two cases.
+    If $m_j$ is still on the preference list of $w^*$ in $P_{j+1}$, then $\mu_j$
+    will still be a stable match under preferences $P_{j+1}$. Again by
+    claim~\ref{claimWomenWorstStable}, woman $w^*$ will still be matched to
+    $m_j$ under preferences $P_{j+1}$.
+    On the other hand, if $m_j$ is no longer acceptable to $w^*$ in $P_{j+1}$,
+    then $m_{j+1}$ will be the stable partner of $w^*$ which is worst-ranked
+    according to $\prec_{w^*}$ (or $\emptyset$ if $w^*$ has already reached her
+    best stable match) by the same logic.
+    This finishes the proof of the inductive step and of claims 2 and 3.
+
+    % Without loss of generality, suppose $w$ is matched under any
+    % stable matching for $P$ (if $w$ is unmatched in $MPDA(P)$,
+    % then $m_i=\emptyset$ for each $i$).
+    % Let $\mu_i$ be a stable matching for restricted preferences $P_i$.
+    % We claim that $\mu_i$ is stable under $P$ if and only if
+    % $w$ is matched in $\mu_i$.
+    % If $w$ is unmatched, then $\mu_i$ cannot be stable for $P$ by
+    % claim~\ref{claimRuralDoctors}.
+    % So suppose $w$ is matched in $\mu_i$.
+
+    % First, we show that if $m_i\ne \emptyset$, i.e. $w$ is matched by
+    % $MPDA(P_i)$, then the match $\mu_i$ returned by $MPDA(P_i)$ is stable
+    % for the original preference set $P$.
+    % Indeed, suppose that no pair $(m',w')$, not matched in $\mu_i$,
+    % are non-blocking for $P_i$. If $w\ne w'$, then $(m',w')$ cannot be blocking
+    % for $P$. So consider $w' = w$. If $w \succ_{m'} \mu_i(m')$,
+    % then $m'$ proposed to $w$ during $MPDA(P_i)$.
+    % Observe that $w$ only accepts matches above a certain threshold,
+    % and once $w$ is matched, her rank of her partner only increases.
+    % Thus, as long as $w$ eventually received a match, $\mu_i(w) \succ_w m'$
+    % (note that this will not be true if $w$ is unmatched in the end).
+
+    % Now, by the above paragraph, when $m_i\ne\emptyset$, $MPDA(P_i)$
+    % returns a stable match of $w$ ranked higher than place $i$.
+    % By claim~\ref{claimWomenWorstStable}, it returns the \emph{worst}
+    % such stable partner.
+
+    % Now, we induct on $i$ to show that $L$ contains all stable matches of $w$ in
+    % order according to $\prec_w$.
+    % The base case, that $m_n = \worst(w)$, is just
+    % claim~\ref{claimWomenWorstStable}.
+    % because $w$ only accepts matches above some threshold any match, she will only upgrade.
+  \end{proof}
+
+  We get this immediate corollary:
+  \begin{corollary}\label{corTruncateOptimal}
+    Suppose that when a woman $w^*$ truncates her preference list after place
+    $i$, she is unmatched by MPDA.
+    Then $w^*$ has no stable parters ranked better than $i$.
+  \end{corollary}
+
+  We are now ready to prove the main result of this section.
+  We focus on the case of $n$ men and $n+1$ women, for simplicity.
+  I'm still working on making this bit fully formal.
+
+  \begin{claim}
+    Consider a random matching market with $n$ men and $n+1$ women.
+    Fix some woman $w^*$.
+    With probability approaching $1$ as $n\to\infty$, % $1 - O((\log n)^{-2})$,
+    $w^*$ has no stable partners ranked better than $\Omega(n/\log n)$.
+    % fewer than $\Theta(n\log n)$ proposals are made by the men
+    % before $MPDA$ terminates. 
+    % Moreover, fewer than $\log n$ proposals are made to $w^*$.
+  \end{claim}
+  \begin{proof}[(Proof Sketch)]
+    Suppose $w^*$ truncates her preference list at place $c n / \log n$ for some
+    constant $c$. Denote this preference list by $P^*$.
+    By corollary~\ref{corTruncateOptimal}, $w^*$ has a stable partner ranked
+    better than $c n/\log n$ if and only if $w^*$ is matched under $MPDA(P^*)$.
+    This occurs if and only if $w^*$ receives a proposal from a man ranked
+    better than $c n/\log n$.
+    But when a man proposes to $w^*$, his rank by $w^*$ is uniformly distributed
+    (over those ranks $w^*$ has not yet seen in the algorithm).
+    To proceed, we upper bound the number of proposals that $w^*$ likely
+    receives, and thus the probability that she gets a proposal ranked higher
+    than $c n/\log n$. 
+
+    Let $Y$ denote the random variable giving the number of proposals $w^*$ sees
+    during the run of $MPDA(P^*)$.
+    First, note that $MPDA(P^*)$ will certainly terminate if all women other
+    than $w^*$ have been proposed to.
+    Thus, $Y$ is statistically dominated by the following variation on a coupon
+    collector random variable:
+    define a process which at each step selects a number uniformly at random
+    from $[n+1]$. The process terminates when each number in $[n]$ has been
+    selected, and $Z$ outputs the number of times $n+1$ was selected.
+    We have $Y$ statistically dominated by $Z$.
+
+    Now, because the standard coupon collector random variable has expectation
+    $O(n\log n)$, this modified coupon collector should have expectation
+    $O(\log n)$. Thus, in expectation, the best ranked man who proposes to
+    $w^*$ has rank $\Omega( n /\log n )$.
+
+    % We again divide $Z$ into ``stages'' $Z = \sum_{i=1}^n Z_i$, where $Z_i$
+    % gives the number of times $n+1$ is selected between the $i-1$th and $i$th
+    % distinct number from $[n]$ being selected.
+    % Let $N_i$ denote the number of draws between the $i-1$th and $i$th distinct
+    % draw from $[n]$.
+
+    % Let $Y$ denote the number of time $w^*$ is proposed to.
+    % $MPDA$ will terminate as soon as $n$ distinct women are proposed to.
+    % This is still dominated by a coupon collector random variable.
+
+    % In expectation, $\Theta(\log n)$ of those proposals go to $w^*$.
+  \end{proof}
+
+
+
+\section{\cite{AshlagiUnbalancedCompetition17} and MOSM to WOSM Conversion}
+
+  For this section, we always assume $|\M| = |\W| + k$ for $k > 0$.
+  The main algorithm used in the analysis of
+  \cite{AshlagiUnbalancedCompetition17} is given here in
+  Algorithm~\ref{algMosmToWosm}.
+  To understand this algorithm fully, I've actually implemented it
+  at \url{https://github.com/ClathomasPrime/CompetitiveStableMatching}.
+  It is presented here in a more ``imperative programming'' style than that
+  given in \cite{AshlagiUnbalancedCompetition17}
+
+  \begin{algorithm} 
+    \caption{MOSM to WOSM Conversion Algorithm}\label{algMosmToWosm}
+  \begin{algorithmic}[1]
+    \State Let $\mu$ be the man-optimal stable matching
+    \State For each man $m$, let $R(m)$ be the set of women who rejected $m$
+    during the run of $MPDA$.
+    \State Let $S$ be the set of unmatched women $\overline\W$
+    % \State\Comment $S$ will be those women who have upgraded to their optimal stable match
+    \While { $S \ne \W$ }
+      \State Store $\tilde\mu \leftarrow \mu$
+      \Comment $\tilde\mu$ stores the most recent \emph{stable} match encountered
+      \State Pick any $\hat w\in \W\setminus S$
+      \State Let $m = \mu(\hat w)$; let $V = (\hat w)$
+      \State Set $\mu(\hat w) = \emptyset$ and add $\hat w$ to $R(m)$
+        \Comment $\hat w$ rejects $m$
+
+      % \While { $m \ne \emptyset$ }
+      \While { $V \ne ()$ }
+        \State Let $w$ be $m$'s most preferred woman not in $R(m)$
+
+        % \While { ($w \notin V$ and $\mu(w)>_w m$) OR 
+        %   ($w \in V$ and $\tilde\mu(w) >_w m$) }
+        \While { $\tilde\mu(w) >_w m$ }
+          \Comment while $w$ has received a better stable match
+          % \State \Comment WAIT if $w\notin V$ then $\mu(w) = \hat\mu(w)$... what gives?
+          \State Add $w$ to $R(m)$
+          \Comment $w$ rejects $m$
+          \State Update $w$ to $m$'s top woman not in $R(m)$
+        \EndWhile
+
+        \State \Comment If $|\M|<|\W|$, then $m$ has had
+          his proposal accepted by \emph{some} woman $w$
+        \If { $w\in S$ and $m >_w \tilde\mu(w)$ }
+        \label{lineFirstDeciciveCase}
+          \Comment End of a terminal phase
+          \State Restore $\mu \leftarrow \tilde\mu$
+          \State Add all women in $V$ to $S$; Set $V = ()$
+          % \State Set $m = \emptyset$
+        \ElsIf {$w\in V$ and $m >_w \tilde\mu(w)$}
+          \Comment New stable matching found
+          \If { $w \ne \hat w = v_1$ }
+            \State Set $m \leftarrow \mu(w) $
+          \EndIf
+          \State Say $w = v_\ell$ and $V = v_1,\ldots, v_J$
+          \State Update $\mu(w)=m$
+            and $\tilde\mu(v_i) = \mu(v_i)$ for $i=\ell,\ell+1,\ldots, J$
+          \State Remove $v_\ell, v_{\ell+1},\ldots,v_J$ from $V$
+          % \Else \Comment $w = v_{\ell}$
+          %   \State Remove the ``internal improvement cycle''
+          %     $v_\ell, \ldots, v_J$ from $V$,
+          %   \State Update all of their matches,
+          %   \State And set the improvement in stone in $\tilde\mu$.
+          % \EndIf
+        \ElsIf {$w\notin V$, $w\notin S$, and $m >_w \tilde\mu(w)$} 
+          \Comment $w$ wants to upgrade to $m$
+          \State Swap $\mu(w) \leftrightarrow m$; append $(w)$ to the end of $V$
+          \Comment $w$ rejects $\mu(w)$
+        \EndIf
+        % \State Set $\nu(w) \leftarrow \nu(w)+1$ and $t \leftarrow t+1$
+
+      \EndWhile
+    \EndWhile
+  \end{algorithmic}
+  \end{algorithm}
+
+  The algorithm starts from the man-optimal stable outcome (MOSM)
+  by running differed acceptance.
+  Then it triggers a series of ``divorces'', i.e. it breaks a marriage
+  $(m,\hat w)$ and ``continues running differed acceptance''.
+  This involves $m$ again proposing down his list until accepted by some woman
+  who prefers $m$ to her current best known stable match.
+  This ``rejection chain'' can involve cycles, where a woman accepts a proposal
+  for the second time. Ignoring cycles for now, the chain can end in one of two
+  ways: a ``terminal phase'' in which an element of $\overline\W$
+  (the set of women unmatched in the MOSM)
+  receives a match, or an ``improvement phase'' in which $\hat w$ receives a
+  better stable match.
+  A terminal phase clearly cannot constitute a stable match, by the rural
+  hospital theorem (claim~\ref{claimRuralDoctors}).
+  On the other hand, \cite{AshlagiUnbalancedCompetition17} shows that any
+  improvement phase yields a new stable outcome.
+
+  Some notes:
+  \begin{itemize}
+    % \item When we reach line~\ref{lineFirstDeciciveCase}, we have either
+    %   $m >_w \mu(w)$ or $m >_w \tilde\mu(w)$ ((This comment isn't quite necessary,
+    %   the next line explain why we actually hit all the cases in the big if else))
+    \item The most recent stable match $\tilde\mu$ is stored, while the
+      ``partial match'' $\mu$ may not correspond to any stable match.
+    \item When $w\in V$, we compare $m$ against $w$'s match in $\tilde\mu$, not in
+      $\mu$. This is because we want to make the smallest changes possible that
+      result in new stable outcomes, and $w$ will still make an improvement from
+      the old stable outcome by accepting this $m$.
+    \item If a cycle occurs during a rejection chain, that cycle is immediately 
+      ``recorded'' in $\tilde\mu$. This is because this is equivalent to picking
+      $\hat w$ to be any woman in the simple cycle, and (similar to differed
+      acceptance) the execution of this algorithm is independent of the order in
+      which women are picked.
+    \item We actually don't need to wait until the rejection chain hits
+      $\overline\W$. Instead, we let $S$ denote the set of women for whom we
+      know that a phase starting with $\hat w\in S$ will be terminal. If at any
+      point a woman in $S$ then accepts the proposal, we know that the phase we
+      are currently in will be terminal as well.
+  \end{itemize}
+
+  Formally, \cite{AshlagiUnbalancedCompetition17} proves that the following
+  all hold during the run of algorithm~\ref{algMosmToWosm}:
+  \begin{itemize}
+    \item $\tilde\mu$ is always a stable matching.
+    \item When a phase is terminal, $\hat w$ is currently matched in $\tilde\mu$
+      to her optimal stable partner. Because we eliminate cycles, any other
+      woman in $V$ would also cause a terminal phase if she was chosen as 
+      $\hat w$. Thus, $S$ always consists of women who have reached their
+      optimal stable match.
+    \item Every woman is at some point in
+      time matched to every stable partner she has, in order from her least
+      preferred to her most preferred.
+    \item Algorithm~\ref{algMosmToWosm} terminates with $\tilde\mu$ being the
+      woman-optimal stable outcome.
+  \end{itemize}
+
+  Finally, \cite{AshlagiUnbalancedCompetition17} shows that the core of an
+  unbalanced market is probably small by showing that
+  algorithm~\ref{algMosmToWosm} probably terminates quickly.
+  Thus, there cannot be a big difference between the man-optimal and the woman
+  optimal stable matches: most agents have unique stable partners, and the
+  average ranks for agent's partners is about the same in all matchings.
+  This is a long, involved probabilistic argument, but is terribly difficult to
+  carry out. The result is:
+
+  \begin{theorem}[\cite{AshlagiUnbalancedCompetition17}, Appendix B]
+    Consider any sequence of random matching markets with $n$ men and $n+k(n)$ women
+    (for any $k(n)\ge 1$).
+    For any $\epsilon>0$, with probability that approaches $1$ as $n\to\infty$,
+    each of the following events hold:
+    \begin{enumerate}
+      \item Define $ s_k(n) := \left(\frac{n+k} n\right) 
+        \log\left(\frac{n+k} k\right)$.
+        Then for every stable matching $\mu$,
+        \begin{align*}
+          R_{men}(\mu) \le (1+\epsilon)s_k(n) &&
+          R_{women}(\mu) \ge \frac n {1 + (1+\epsilon)s_k(n)}
+        \end{align*}
+      \item Less than a $1/\sqrt{\log n}$ fraction of the men and women have
+        multiple stable partners. In particular, this fraction approaches $0$ as
+        $n\to\infty$.
+        Moreover, the total number of stable partners
+        is at most $n + n/\sqrt{\log n}$.
+      \item There is little difference in ranking between the MOSM and the WOSM:
+        \begin{align*}
+          \frac{R_{men}(WOSM)}{R_{men}(MOSM))} \le 1+\epsilon &&
+          \frac{R_{women}(WOSM)}{R_{women}(MOSM))} \ge 1-\epsilon
+        \end{align*}
+    \end{enumerate}
+  \end{theorem}
+
+  Comparing this to the results from section 3, we see that when imbalance is
+  present, men \emph{almost always} do as well in \emph{any} stable matching as
+  they do in the man-optimal stable matching.
+  Two special cases are worth pointing out:
+
+  \begin{corollary}[2.2 in \cite{AshlagiUnbalancedCompetition17}]
+    Suppse $k(n) = 1$ for each $n$.
+    Then for every $\epsilon>0$, with probability approaching $1$ as
+    $n\to\infty$, we have
+    \begin{align*}
+      R_{men}(\mu) \le (1+\epsilon)\log n &&
+      R_{women}(\mu) \ge (1-\epsilon)\frac n {\log n}
+    \end{align*}
+    for every stable matching $\mu$.
+  \end{corollary}
+
+  \begin{corollary}[2.3 in \cite{AshlagiUnbalancedCompetition17}]
+    Suppse there exists a $\lambda >0$ with $k(n) = \lambda n$ for each $n$.
+    Let $\kappa = (1 + \lambda)\log(1 + 1/\lambda)$.
+    Then for every $\epsilon>0$, with probability approaching $1$ as
+    $n\to\infty$, we have
+    \begin{align*}
+      R_{men}(\mu) \le (1+\epsilon)\kappa &&
+      R_{women}(\mu) \ge (1-\epsilon)\frac n {1 + \kappa}
+    \end{align*}
+    for every stable matching $\mu$.
+  \end{corollary}
+
+  In a follow-up paper \cite{PittelLikelyStableUnbalanced19}, many of these
+  results are shown to be sharp, and the analysis is extended to count the
+  average number of stable matchings in an unbalanced market.
+  Interestingly, \cite{PittelLikelyStableUnbalanced19} is not able to improve
+  the rate at which the fraction of agents with multiple stable partners tends
+  to zero as $n\to\infty$, even though the arguments in section 4 seem to
+  suggest that this fraction might be about $1/\log n$.
+
+  % \subsection{Relation to the rotation poset}
+  It's worth noting that algorithm~\ref{algMosmToWosm} is almost identical to the
+  algorithm \emph{minimal-differences} described
+  in~\cite{GusfieldStableStructureAlgs89} (a book which fully fleshes out
+  ideas initiated in~\cite{IrvingCountingStable86}).
+  The purpose of algorithm \emph{minimal-differences} is to traverse the
+  matching lattice in a maximal chain from the MOSM to the WOSM, and along the
+  way identify ``the rotation poset'' (i.e. the poset for which the matching
+  lattice is the collection of downwards-closed sets of the poset, which is
+  guaranteed to exist by Birkhoff's representation theorem).
+  The only difference is that algorithm~\ref{algMosmToWosm} does not explicitly
+  identify the ``rotations'' (i.e. simple improvement cycles).
+  \cite{AshlagiUnbalancedCompetition17}'s careful analysis of this algorithm
+  for unbalanced random markets essentially says that the rotation poset, and
+  consequentially the stable matching lattice, is typically small (in a few very
+  precise ways).
+
+    % It's not clear if the authors of \cite{AshlagiUnbalancedCompetition17} realize this.
+
+
+  % \begin{proof}
+  %   Induct on the length of $V$ and the size of $S$.
+  %   If $|V| = 1$, then 
+  %   UUGH well this still gets a bit messy. Probably best to use known proofs.
+  %   I think it would work IF you show a converse of the ``lattice neighbors
+  %   covering'' thing: all guys hasse-adjacent in the lattice differ by an
+  %   improvement cycle.
+  % \end{proof}
+
+\bibliography{MechDesign}{}
+\bibliographystyle{alpha}
+
+\end{document}

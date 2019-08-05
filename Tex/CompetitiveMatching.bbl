@@ -1,0 +1,70 @@
+\begin{thebibliography}{KGW18}
+
+\bibitem[AKL17]{AshlagiUnbalancedCompetition17}
+Itai Ashlagi, Yash Kanoria, and Jacob~D. Leshno.
+\newblock Unbalanced random matching markets: The stark effect of competition.
+\newblock {\em Journal of Political Economy}, 125(1):69 -- 98, 2017.
+
+\bibitem[DF81]{DubinsMachiavelliGaleShapley81}
+E.~L. Dubins and A.~D. Freedman.
+\newblock Machiavelli and the gale-shapley algorithm.
+\newblock {\em The American Mathematical Monthly}, 88:485--494, 08 1981.
+
+\bibitem[GI89]{GusfieldStableStructureAlgs89}
+Dan Gusfield and Robert Irving.
+\newblock {\em The stable marriage problem: Structure and algorithms}.
+\newblock The MIT Press, Cambridge, MA, 1989.
+
+\bibitem[GS85]{GaleMsMachiavelli85}
+David Gale and Marilda Sotomayor.
+\newblock Ms. machiavelli and the stable matching problem.
+\newblock {\em The American Mathematical Monthly}, 92(4):261--268, 1985.
+
+\bibitem[IL86]{IrvingCountingStable86}
+Robert~W Irving and Paul Leather.
+\newblock The complexity of counting stable marriages.
+\newblock {\em SIAM J. Comput.}, 15(3):655--667, August 1986.
+
+\bibitem[IM05]{ImmorlicaHonestyStability05}
+Nicole Immorlica and Mohammad Mahdian.
+\newblock Marriage, honesty, and stability.
+\newblock In {\em Proceedings of the Sixteenth Annual {ACM-SIAM} Symposium on
+  Discrete Algorithms, {SODA} 2005, Vancouver, British Columbia, Canada,
+  January 23-25, 2005}, pages 53--62, 2005.
+
+\bibitem[KGW18]{KarlinExpUBNumberStable18}
+Anna~R. Karlin, Shayan~Oveis Gharan, and Robbie Weber.
+\newblock A simply exponential upper bound on the maximum number of stable
+  matchings.
+\newblock In {\em Proceedings of the 50th Annual ACM SIGACT Symposium on Theory
+  of Computing}, STOC 2018, pages 920--925, New York, NY, USA, 2018. ACM.
+
+\bibitem[Knu97]{KnuthStableCombinatorial97}
+Donald Knuth.
+\newblock {\em Stable Marriage and its Relation to Other Combinatorial Problems
+  (Translation by Martin Goldstein of a 1977 French publication)}, volume~10 of
+  {\em CRM Proceedings and Lecture Notes}.
+\newblock 1997.
+
+\bibitem[Pit89]{PittelAverageStable89}
+Boris Pittel.
+\newblock The average number of stable matchings.
+\newblock {\em SIAM J. Discret. Math.}, 2(4):530--549, November 1989.
+
+\bibitem[Pit92]{PittelLikelyStable92}
+Boris Pittel.
+\newblock On likely solutions of a stable marriage problem.
+\newblock {\em Ann. Appl. Probab.}, pages 358--401, 1992.
+
+\bibitem[Rot86]{RothRuralHospital86}
+Alvin~E. Roth.
+\newblock On the allocation of residents to rural hospitals: A general property
+  of two-sided matching markets.
+\newblock {\em Econometrica}, 54(2):425--427, 1986.
+
+\bibitem[Wil72]{WilsonAnalysisStable72}
+L.~B. Wilson.
+\newblock An analysis of the stable marriage assignment algorithm.
+\newblock {\em BIT Numerical Mathematics}, 12(4):569--575, Dec 1972.
+
+\end{thebibliography}

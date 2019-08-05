@@ -1,0 +1,497 @@
+\documentclass[12pt]{article}
+
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage[margin=1in]{geometry} 
+\usepackage{comment}
+\usepackage{amsmath,amsthm,amssymb}
+% \usepackage[vlined,linesnumbered,ruled,resetcount]{algorithm2e}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\val}{val}
+\DeclareMathOperator*{\best}{best}
+\DeclareMathOperator*{\worst}{worst}
+
+\usepackage{algorithm}
+% \usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rgz}{\mathbb{R}_{\ge 0}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\newcommand{\Es}[2]{\mathbb{E}_{#1}\left[{#2}\right]}
+\newcommand{\E}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\ip}[2]{\left\langle{#1} , {#2}\right\rangle}
+
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{claim}[definition]{Claim}
+
+\begin{document}
+
+% \renewcommand{\qedsymbol}{\filledbox}
+ 
+\title{Mechanism Design Notes}
+\author{Clay Thomas\\
+claytont@princeton.edu}
+\maketitle
+
+\clearpage
+\section{Differed Acceptance and Stable Matching}
+
+\begin{definition}
+  A matching market is a collection $D$ of doctors and $H$ of hospitals, where
+  each doctor $d\in D$ has a ranking (strict total order) denoted $\succ_d$ 
+  over hospitals $h\in H$, and vice-versa.
+
+  A matching is a one-to-one assignment of doctors to hospitals, which we denote
+  by $\mu : D\cup H\to D\cup H\cup\{\emptyset\}$, such that all the reasonable
+  conditions are met to make it a matching. We write $\mu(i) = \emptyset$ of
+  agent $i$ is unmatched.
+
+  A matching $\mu$ is \emph{stable} if for every unmatched doctor/hospital pair 
+  $(d,h)\in D\times H$, we do not simultaneously have
+  $h \succ_d \mu(d)$ and $d \succ_h \mu(h)$.
+
+  % The differed acceptance algorithm runs as follows: while there are unmatched
+  % doctors, pick one of them (in some order) and have them ``propose'' to their
+  % highest ranked hospital which they have not yet proposed to.
+  % If that hospital is unmatched, they will tentatively accept the doctor.
+  % If that hospital is matched, but they prefer their current match, then
+  % $d$ remains unmatched. 
+  % If that hospital is matched, and they prefer $d$ to their current match,
+  % then the hospital tentatively accepts $d$ and the old match becomes unmatched.
+\end{definition}
+
+The doctor-proposing differed acceptance algorithm is then:
+\begin{algorithm}
+\begin{algorithmic}[0]
+  \State Let $U = D$ be the set of unmatched doctors
+  \State Let $\mu$ be an all empty matching
+  \While { $U\ne \emptyset$ and some $d\in U$ has not proposed to every hospital }
+    \State Pick such a $d$ (in any order)
+    \State $d$ ``proposes'' to their highest-ranked hospital $h$ which 
+      they have not yet proposed to
+    \If {$\mu(h) = \emptyset$} 
+      \State Set $\mu(h) = d$, remove $d$ from $U$ 
+    \EndIf
+    \If {$\mu(h) = d_0$ and $d\succ_h d_0$} 
+      \State Set $\mu(h) = d$, remove $d$ from $U$, add $d_0$ to $U$
+      \Else \ \ $h$ remains matched to $d_0$ and $d$ remains in $U$
+    \EndIf
+  \EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\begin{claim}
+  The DA algorithm terminates.
+\end{claim}
+\begin{proof}
+  Every doctor will propose to every hospital at most once.
+\end{proof}
+
+Intuitively, this algorithm starts with the doctors doing whatever they prefer
+the most, then doing the minimal amount of work to make the matching stable.
+Indeed, doctors propose in their order of preference. If a hospital ever
+rejected a doctor they prefer, then remained with their current match,
+that pair would clearly create an instability in the final mechanism.
+
+\begin{claim}
+  The output of DA is a stable matching.
+\end{claim}
+\begin{proof}
+  Consider a pair $d\in D$, $h\in H$ which is unmatched in the output matching
+  $\mu$. Suppose for contradiction $h\succ_d \mu(d)$ and $d\succ_h \mu(h)$.
+  Well, in the DA algorithm, $d$ would propose to $h$ before $\mu(d)$.
+  However, it's easy to observe that once a hospital is proposed to,
+  they remains matched and can only increase their preference for their match.
+  This contradicts the fact that $h$ was eventually matched to $\mu(h)$.
+\end{proof}
+
+Note that this algorithm gives us a very interesting existence result: it was
+not at all clear that stable matching existed before we had this algorithm.
+
+\begin{claim}
+  If a doctor $d\in D$ is ever rejected by a hospital $h\in H$ during some run
+  of DA (that is, $d$ proposes to $h$ and $h$ does not accept) then no stable
+  matching can pair $d$ to $h$.
+\end{claim}
+\begin{proof}
+  Let $\mu$ be any matching, not necessarily stable. We will show that if $h$
+  rejects $\mu(h)$ at any step of DA, then $\mu$ is not stable.
+
+  Consider the first time during in the run of DA where such a rejection occurred.
+  In particular, let $h$ reject $d=\mu(h)$ in favor of $d'\ne d$ 
+  (either because $d'$ proposed to $h$,
+  or because $d'$ was already matched to $h$ and $d$ proposed).
+  We have $d'\succ_h d$.
+  We have $\mu(d')\ne h$, simply because $\mu$ is a matching.
+  Because this is the first time any doctor has been rejected by a match from
+  $\mu$, $d'$ has not yet proposed to $\mu(d')$.
+  This means $h \succ_{d'} \mu(d')$. However, this means $\mu$ is not stable.
+
+  Thus, no hospital can ever reject a stable partner in doctor-proposing DA.
+\end{proof}
+
+\begin{corollary}
+  Let $\best(d)$ denote the most preferred match $d$ can achieve in any stable
+  matching, i.e. the maximum according to $\succ_d$ of the set
+  $\{h\in H: \exists \mu:\text{$\mu$ is stable and $\mu(d)=h$}\}$.
+
+  In the match returned by DA, every $d\in D$ is paired to $\best(d)$.
+\end{corollary}
+
+\begin{corollary}
+  The matching output by the DA algorithm is independent of the order in which
+  doctors are selected to propose.
+\end{corollary}
+
+\begin{corollary}\label{claimRuralDoctors}
+  If a set of doctors $\bar D$ are rejected by every hospital during DA,
+  then no stable matching will match any doctor in $\bar D$.
+  Moreover, in every stable matching, the set of unmatched doctors is the same.
+\end{corollary}
+\begin{proof}
+  Let $\bar D$ be unmatched in DA, and $\bar D'$ unmatched in some other stable
+  matching $\mu$. The doctors in $\bar D$ are rejected by every hospital,
+  so $\bar D\subseteq \bar D'$. But these sets must be the same size,
+  so they are equal (assuming every hospital prefers any doctor to being
+  unmatched).
+\end{proof}
+
+This formalizes our intuition that DA moves the doctor's down their preference
+lists the minimal amount required to enforce stability.
+
+A completely dual phenomenon occurs for the hospital's preferences:
+\begin{claim}
+  In the match returned by DA, every $h\in H$ is paired to their worst stable
+  match in $D$.
+\end{claim}
+\begin{proof}
+  Let $d\in D$ and $h\in H$ be paired by doctor-proposing differed acceptance.
+  Let $\mu$ be any stable matching which does not pair $d$ and $h$.
+  We must have $h >_d \mu(d)$, because $h=\best(d)$.
+  If $d >_h \mu(h)$, then $\mu$ is not stable.
+  Thus, $h$ cannot be stably matched to any doctor they prefer less than $d$.
+\end{proof}
+\begin{claim}
+  The set of unmatched hospitals is the same in any stable matching.
+\end{claim}
+\begin{proof}
+  Hospital-proposing DA also produces a stable matching, so this simply follows
+  from claim~\ref{claimRuralDoctors}.
+\end{proof}
+
+To strengthen the power of our solution concept further,
+we can also compare stable matching to arbitrary matchings.
+\begin{claim}\label{claimBetterThanAllMatchings}
+  Let $\mu$ be doctor-proposing DA matching, and let $\mu'$ be an arbitrary
+  matching, $\mu\ne\mu'$.
+  Then it is not possible for every doctor to prefer their match in
+  $\mu'$ over their match in $\mu$.
+\end{claim}
+\begin{proof}[Proof Sketch?].
+  Suppose for contradiction that $\mu'(d) \ge_d \mu(d)$ for every $d\in D$.
+  Then every doctor will propose to $\mu'(d)$ before $\mu(d)$.
+  Now, because DA is independent of execution order, we can find an execution
+  where every doctor $d$ is tentatively accepted by $\mu'(d)$.
+  In particular, no doctor is currently unmatched,
+  so actually, DA will halt and return the matching $\mu'$.
+\end{proof}
+
+Moreover, the following hints at a ``lattice property'' of stable matchings:
+in order for one side to benefit, the other side must be worst off.
+\begin{claim}
+  Let $\mu, \mu'$ be stable matchings, and say $\mu(d) = h$, but $\mu'(d)\ne h$.
+  Then $\mu'(d) >_d h$ if and only if $\mu'(h) <_h d$.
+\end{claim}
+\begin{proof}
+  $(\Leftarrow)$ ``If $h$ downgrades, then $d$ upgrades''.
+  Suppose $\mu'(h) <_h d$. Because $\mu'$ is stable, yet $d$ and $h$
+  are not matched in $\mu'$, we must have $\mu'(d) >_d h$,
+  or else $(d,h)$ would form a blocking pair.
+  (A rephrasing: this direction is easy because the definition of stability
+  immediately makes it impossible for $d$ and $h$ to both downgrade).
+
+  $(\Rightarrow)$ ``If $h$ upgrades, then $d$ downgrades''.
+  Let $d' = \mu'(h) \ne d$ and $h' = \mu'(d) \ne h$.
+  Suppose that $d' >_h d$, and for contradiction suppose that $h' >_d h$.
+  Because $\mu'$ is stable, $(d', h')$ is not a blocking pair,
+  so either $h >_{d'} h'$ or $d>_{h'} d'$.
+  In the first case, $(d',h)$ form a blocking pair in $\mu$,
+  and in the second case, $(d,h')$ form a blocking pair in $\mu$.
+  Thus, in either case $\mu$ is not stable.
+
+  % we cannot have $h' >_{d'} h$
+  % and $d' >_{h'} d$ simultaneously, so either $h >_{d'} h'$ or $d >_{h'} d'$.
+  % But if $h >_{d'} h'$, then $(h,d')$ is a blocking pair in $\mu'$,
+  % and if $d >_{h'} d'$, then $(h',d)$ is a blocking pair in $\mu'$.
+
+  % For contradiction, suppose $\mu'(d) >_d h$ as well. 
+\end{proof}
+
+\subsection{Incentives}
+
+  A surprisingly simple counterexample demonstrates that no procedure for
+  assigning stable matchings can be dominant strategy incentive compatible for
+  all agents:
+
+  \begin{tabular}{ccc|ccc}
+    m1 & m2 & m3 & w1 & w2 & w3 \\
+    \hline
+    w2 & w1 & w1 & m1 & m3 & m1 \\
+    w1 & w2 & w2 & m3 & m1 & m2 \\
+    w3 & w3 & w3 & m2 & m2 & m3 \\
+  \end{tabular}
+  \quad
+  \begin{tabular}{cccc}
+    x: & \{ m1: w2, m2: w3, m3: w1 \} \\
+    y: & \{ m1: w1, m2: w3, m3: w2 \}
+  \end{tabular}
+
+  \quad
+  \begin{tabular}{c|ccccccccc}
+    \hline
+       w1 & m2, m3 & m3 & m3
+    \\ w2 & m1 & m1, m2 & m1
+    \\ w3 & & & m2
+  \end{tabular}
+  \quad
+  \begin{tabular}{c|ccc}
+    \hline
+       m1 & w1, w3 & w1
+    \\ m2 &  & w3
+    \\ m3 & w2 & w2
+  \end{tabular}
+
+  Above, x is the man-optimal and y is the woman-optimal stable outcome.
+  However, if w1 reports the preference m1, m2, m3, then
+  w1, m2 forms a blocking pair in x, while y remains stable.
+  Indeed, the man-optimal outcome in this case is y,
+  so y is the unique stable outcome.
+  Thus, a stable matching procedure must return y,
+  and w1 benefits from this deviation.
+
+  On the other hand, if m1 reports the preference w2, w3, w1,
+  then m1, w3 form a blocking pair in y, while x remains stable.
+  Indeed, the woman-optimal outcome in this case is x,
+  so x is the unique stable outcome.
+  Thus, a stable matching procedure must return x,
+  and m1 benefits from this deviation.
+
+  % \begin{tabular}{c|ccccccccc}
+  %   \hline
+  %      w1 & m2, m3 & m2 & m2, m1 & m1 & m1
+  %   \\ w2 & m1 & m1, m3 & m3 & m2, m3 & m3
+  %   \\ w3 & & & & & m2
+  % \end{tabular}
+
+  \begin{claim}
+    No stable matching mechanisms is DSIC for all agents.
+  \end{claim}
+
+\subsection{Linear Program Formulation}
+
+  Let $A\subseteq D\times H$ be the set of ``admissible pairs'', i.e. 
+  those $(d,h)$ for which both elements prefer being matched to each other to
+  being unmatched.
+  % We let $u_{dh}$ be specified later.
+  \begin{alignat*}{2}
+    & & & MP_u: \\
+    & \text{variables: } & &
+      \begin{aligned}[t]
+        x_{dh}
+          & \ge 0
+          & \quad \forall d\in D, h\in H \\
+          % & \quad \forall (d,h)\in A \\
+      \end{aligned} \\
+    & \text{maximize: } & &
+      % \sum_{i\in D, j\in H} u_{ij} x_{ij} \\
+      \sum_{i\in D, j\in H} x_{ij} \\
+    & \text{subject to: }& \quad &
+      \begin{aligned}[t]
+          \sum_{j\in H} x_{dj}
+          & \le 1
+          & \quad \forall d\in D
+          &\qquad\qquad& (\text{dual variable $\alpha_d$}) \\
+          %
+          \sum_{i\in D} x_{ih}
+          & \le 1
+          & \quad \forall h\in H
+          &\qquad\qquad& (\text{dual variable $\beta_h$}) \\
+          %
+          x_{dh} + \sum_{j>_d h} x_{dj} + \sum_{i>_h d} x_{ih}
+          & \ge 1
+          & \quad \forall d\in D, h\in H
+          &\qquad\qquad& (\text{dual variable $\gamma_{dh}$}) \\
+      \end{aligned}
+  \end{alignat*}
+
+  \begin{alignat*}{2}
+    & & & DMP: \\
+    & \text{variables: } & & 
+      \begin{aligned}[t]
+          \alpha_d
+          & \ge 0
+          & \quad \forall d\in D \\
+          \beta_h
+          & \ge 0
+          & \quad \forall h\in H \\
+          \gamma_{dh}
+          & \ge 0
+          & \quad \forall d\in D, h\in H \\
+          % &\qquad& (\text{dual variable $w_v$}) \\
+      \end{aligned} \\
+    & \text{minimize: } & & 
+      \sum_{d\in D} \alpha_d + \sum_{h\in H} \beta_h
+      - \sum_{d\in D, h\in H} \gamma_{dh} \\
+    & \text{subject to: }& \quad &
+      \begin{aligned}[t]
+          \alpha_{d} + \beta_{h} - \gamma_{dh}
+            - \sum_{j <_d h} \gamma_{dj} - \sum_{i <_h d} \gamma_{ih}
+          & \ge 1
+          % & \ge u_{dh}
+          & \quad \forall d\in D, h\in H
+          &\qquad& (\text{dual of variable $x_{dh}$}) \\
+      \end{aligned}
+  \end{alignat*}
+
+  The following lemmas give a major technical tool,
+  and also distinguish this linear program from most others.
+  \begin{lemma}
+    For any stable fractional matching $x$ (i.e. a feasible point in MP)
+    $(\alpha, \beta, x)$ is feasible for DMP, where
+    \begin{align*}
+      \forall d\in D: \alpha_d = \sum_{j\in H} x_{dj}
+      && \forall h\in H: \beta_h = \sum_{i\in D} x_{ih}
+    \end{align*}
+    Moreover, $x$ has the same value in MP as $(\alpha, \beta, x)$ has
+    in DMP, so every fractional matching $x$ is an optimal solution of MP.
+  \end{lemma}
+  \begin{proof}
+    We clearly have $\alpha, \beta, x \ge 0$.
+    Thus it suffices to check the dual constraint of each $x_{dh}$:
+    \begin{align*}
+      \sum_{j\in H} x_{dj} + \sum_{i\in D} x_{ih}
+        - x_{dh} - \sum_{j <_d h} x_{dj} - \sum_{i <_h d} x_{ih}
+      = x_{dh} + \sum_{j >_d h} x_{dj} + \sum_{i >_h d} x_{ih}
+      \ge 1
+    \end{align*}
+    Furthermore, the objective value of DMP works out to be:
+    \begin{align*}
+      \sum_{d\in D} \alpha_d + \sum_{h\in H} \beta_h
+        - \sum_{d\in D, h\in H} x_{dh}
+      = \sum_{d\in D} \sum_{j\in H} x_{dj}
+        + \sum_{h\in H} \sum_{i\in D} x_{ih}
+        - \sum_{d\in D, h\in H} x_{dh}
+      = \sum_{d\in D, h\in H} x_{dh}
+    \end{align*}
+    So by strong duality, $x$ and $(\alpha,\beta,x)$ are both optimal.
+  \end{proof}
+
+  We now procede to reprove several of the classical results about stable
+  matchings using this linear programming framework.
+
+  \begin{claim}
+    For all solutions $x$ to MP, 
+    I.e. the same set of agents is matched in every stable outcome.
+  \end{claim}
+
+
+
+  \subsection{Many-to-one Matchings}
+    Consider this counterexample from~\cite{RothCollegeSubtlety85},
+    in which c1 has a quota of two students (other ci are taking one student).
+    We run college-proposing DA:
+
+    \begin{tabular}{ccc}
+      c1 & c2 & c3 \\ \hline
+      s1 & s1 & s3 \\
+      s2 & s2 & s1 \\
+      s3 & s3 & s2 \\
+      s4 & s4 & s4 \\
+    \end{tabular}
+    \quad
+    \begin{tabular}{cccc}
+      s1 & s2 & s3 & s4 \\ \hline
+      c3 & c2 & c1 & c1 \\
+      c1 & c1 & c3 & c2 \\
+      c2 & c3 & c2 & c3 \\
+    \end{tabular}
+    \qquad
+    \begin{tabular}{c||c|c|c|c|c|c|c}
+         s1 & c1 , c2 & c1  &   c1  & c1, c3 & c3
+      \\ s2 & c1      & c1, c2 & c2 & c2 & c2
+      \\ s3 & c3      & c3  & c3, c1& c1  & c1
+      \\ s4 &       & & & & c1
+    \end{tabular}
+
+    The example was constructed so that c1 would ``kick itself out'' from
+    s1 (by causing c3 to propose to s1). This implies two bad news
+    for the strategic properties of many-to-one matchings:
+    if c1 reports preference list s1, s2, s4, s3, then c1 is matched to
+    s1, s4 (which it should strictly prefer to s3, s4).
+    Thus, in many-to-one matching DA, the proposing side is not strategyproof
+    (if the proposing side has quotas greater than $1$).
+
+    For another bit of bad news is, consider the many-to-one matching
+    c1: s2, s4; c2: s1, c3: s3. Every college prefers this matching to the
+    result of college-proposing DA, contrary to
+    claim~\ref{claimBetterThanAllMatchings}.
+    Note that indeed this matching is not stable: c1 would rather have s1
+    than s2, and s1 would rather have c1 than c2.
+
+    % Note that this example is almost no different than matching with couples, I
+    % think. Maybe I should check on this.
+
+    The following standard assumption is typically made about how preference
+    over students relates to preferences over groups of students:
+    \begin{definition}
+      A relation $>^*$ over sets of students is \emph{responsive}
+      if $\{s\} >^* \{t\}$ for $s,t\notin S$ implies
+      $S\cup \{s\} >^* S\cup \{t\}$.
+    \end{definition}
+
+    Extensive properties are demonstrated in~\cite{RothCollegeRevisited89},
+    I guess.
+
+  \subsection{The Birkhoff Polytope}
+    \begin{definition}
+      A corner of a polytope $P\subseteq \R^n$ is a point $c\in P$
+      such that there does not exist $x,y\in P$, $x\ne c\ne y$,
+      such that $c\in [x,y] = \{tx + (1-t)y : t\in [0,1]\}$
+    \end{definition}
+
+    \begin{claim}
+      The diameter of the Birkhoff polytope graph is $2$
+    \end{claim}
+    \begin{proof}
+      Every permutation is the product of two (non-disjoint) cycles:
+      \begin{align*}
+        & (i^1_1\ i^1_2\ldots i^1_{k_1})
+          (i^2_1\ i^2_2\ldots i^2_{k_2})
+          \ldots (i^k_1\ i^k_2\ldots i^k_{k_k})
+        \\ & = (i^1_1\ i^1_2\ldots i^1_{k_1} \ %
+          i^2_1\ i^2_2\ldots i^2_{k_2} \ i^3_1 %
+          \ldots i^{k-1}_{k_{k-1}}\ i^k_1\ i^k_2\ldots i^k_{k_k})
+          (i^k_{1}\ i^{k-1}_1 \ldots i^3_1\ i^2_1\ i^1_1 )
+      \end{align*}
+    \end{proof}
+
+
+
+
+
+
+
+  \bibliography{MechDesign}{}
+  \bibliographystyle{alpha}
+
+\end{document}
