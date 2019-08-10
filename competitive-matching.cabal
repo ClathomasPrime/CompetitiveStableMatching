@@ -2,7 +2,7 @@
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a2861089ecd21fab1fda23900582c092ec7ad2b6e5f7a13caba593e6ac70583f
+-- hash: 112f6d03406dd0c742cc8ec09f6d99086cfd4987f22547f19a04da5acd0bd0d1
 
 name:           competitive-matching
 version:        0.1.0.0
@@ -22,6 +22,7 @@ executable competitive-matching
   main-is: Main.hs
   other-modules:
       Convert
+      DynamicPoset
       Lattice
       Poset
       Rand

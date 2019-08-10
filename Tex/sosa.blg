@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: sosa.aux
+The style file: alpha.bst
+Database file #1: MechDesign.bib
+Warning--empty publisher in KnuthStableCombinatorial97
+You've used 13 entries,
+            2543 wiz_defined-function locations,
+            660 strings with 6995 characters,
+and the built_in function-call counts, 5282 in all, are:
+= -- 542
+> -- 193
+< -- 10
++ -- 65
+- -- 60
+* -- 385
+:= -- 842
+add.period$ -- 40
+call.type$ -- 13
+change.case$ -- 72
+chr.to.int$ -- 13
+cite$ -- 14
+duplicate$ -- 222
+empty$ -- 409
+format.name$ -- 79
+if$ -- 1095
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 15
+newline$ -- 68
+num.names$ -- 39
+pop$ -- 61
+preamble$ -- 1
+purify$ -- 87
+quote$ -- 0
+skip$ -- 185
+stack$ -- 0
+substring$ -- 372
+swap$ -- 41
+text.length$ -- 10
+text.prefix$ -- 6
+top$ -- 0
+type$ -- 96
+warning$ -- 1
+while$ -- 55
+width$ -- 17
+write$ -- 173
+(There was 1 warning)

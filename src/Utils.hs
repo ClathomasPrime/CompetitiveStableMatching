@@ -59,6 +59,15 @@ whileAvailable p m = do
     Nothing -> return []
     Just a -> do { b <- m a ; (b:) <$> whileAvailable p m }
 
+takeAccumWhileM :: Monad m => [a] -> b -> (a -> b -> m (Bool, b)) -> m ([a], b)
+takeAccumWhileM [] b _ = return ([], b)
+takeAccumWhileM (a:as) b act = do
+  (res, b') <- act a b
+  if res
+    then do (as',b'') <- takeAccumWhileM as b' act
+            return (a:as', b'')
+    else return ([], b')
+
 takeWhileM :: Monad m => (a -> m Bool) -> [a] -> m [a]
 takeWhileM p [] = return []
 takeWhileM p (a:as) = do
@@ -74,6 +83,18 @@ doWhileM_ :: Monad m => m Bool -> m ()
 doWhileM_ m = do
   b <- m
   if b then doWhileM_ m else return ()
+
+-- note: asumes predicate will be satisfied at most once in the list
+betweenPredicatesMap :: (a -> Bool) -> (a -> Bool) -> (a -> a) -> [a] -> [a]
+betweenPredicatesMap _ _ _ [] = []
+betweenPredicatesMap aftThis befThis phi (a:as)
+  | aftThis a = a : btwMap' as
+  | befThis a = a:as
+  | otherwise = a : betweenPredicatesMap aftThis befThis phi as
+  where btwMap' [] = []
+        btwMap' (a:as)
+          | befThis a = a:as
+          | otherwise = phi a : btwMap' as
 
 performIfSucceeds :: MonadState s m => m (Maybe a) -> m (Maybe a)
 performIfSucceeds m = do

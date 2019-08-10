@@ -1,0 +1,26 @@
+\begin{thebibliography}{Thu02}
+
+\bibitem[IL86]{IrvingCountingStab86}
+Robert~W. Irving and Paul Leather.
+\newblock The complexity of counting stable marriages.
+\newblock {\em {SIAM} J. Comput.}, 15(3):655--667, 1986.
+
+\bibitem[Pit89]{PittelAverageStable89}
+B.~Pittel.
+\newblock The average number of stable matchings.
+\newblock {\em SIAM J. Discret. Math.}, 2(4):530--549, November 1989.
+
+\bibitem[Sho]{ShorAsymptoticStab19}
+Peter Shor.
+\newblock The asymptotic behavior of a recurrence related to stable matchings.
+\newblock Theoretical Computer Science Stack Exchange.
+\newblock URL: \url{https://cstheory.stackexchange.com/q/44371} (version:
+  2019-08-08).
+
+\bibitem[Thu02]{ThurberConcerningMaxStab02}
+Edward~G. Thurber.
+\newblock Concerning the maximum number of stable matchings in the stable
+  marriage problem.
+\newblock {\em Discrete Mathematics}, 248:195--219, 2002.
+
+\end{thebibliography}

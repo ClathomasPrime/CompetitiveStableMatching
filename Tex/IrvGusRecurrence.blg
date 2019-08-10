@@ -1,0 +1,46 @@
+This is BibTeX, Version 0.99d (TeX Live 2013/Debian)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: IrvGusRecurrence.aux
+The style file: alpha.bst
+Database file #1: IrvGusRecurrence.bib
+You've used 4 entries,
+            2543 wiz_defined-function locations,
+            588 strings with 5208 characters,
+and the built_in function-call counts, 1417 in all, are:
+= -- 144
+> -- 43
+< -- 3
++ -- 15
+- -- 12
+* -- 97
+:= -- 234
+add.period$ -- 13
+call.type$ -- 4
+change.case$ -- 21
+chr.to.int$ -- 4
+cite$ -- 4
+duplicate$ -- 55
+empty$ -- 115
+format.name$ -- 19
+if$ -- 286
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 3
+newline$ -- 24
+num.names$ -- 12
+pop$ -- 22
+preamble$ -- 1
+purify$ -- 25
+quote$ -- 0
+skip$ -- 43
+stack$ -- 0
+substring$ -- 102
+swap$ -- 4
+text.length$ -- 3
+text.prefix$ -- 3
+top$ -- 0
+type$ -- 32
+warning$ -- 0
+while$ -- 14
+width$ -- 5
+write$ -- 54

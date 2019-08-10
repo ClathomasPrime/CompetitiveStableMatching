@@ -175,6 +175,9 @@ shoutMatch :: MatchingMonad m a b => Rotation a b -> m ()
 shoutMatch rot = do
   mu <- use stableMatching
   vol <- use volatileWomen
+  traceShowM "shout match needs to still kinda happen"
+  traceShowM vol
+  traceShowM mu
   tell [(mu, vol, rot)]
 
 
