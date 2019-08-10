@@ -374,6 +374,7 @@ smallPosetEx = MatchingInput
     , [4,3,5]
     ]
   }
+
 -- Stable marriage: structure and algs Figure 2.1
 mediumPosetEx :: MatchingInput Int Int
 mediumPosetEx = MatchingInput

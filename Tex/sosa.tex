@@ -147,6 +147,18 @@
   We use the ``unacceptable matches'' concept as a technical tool,
   but ignore the subtleties of the other variations.
 
+  \paragraph{Relation to prior work.}
+  No claim in this paper is original, and much of our treatment and proofs are
+  very similar to that presented in \cite{GusfieldStableStructureAlgs89}.
+  The point where we start to differ is in proving results about the rotation
+  poset: we use the concepts of women truncating their preference lists and
+  running MPDA to prove most of our claims.
+  This approach has been surveyed in \cite{ManloveMatchPrefs13}.
+
+  ==== HERM actually idk things were pretty clear to begin with in all these
+  proof... but whatever. I'm still not sure how different my algorithm is from
+  anything else.
+
   \paragraph{Organization.}
   In section 2, we review the basic properties of differed acceptance and stable
   matchings, which will motivate some of the techniques to come.
@@ -232,12 +244,18 @@
   \begin{proof}
     First, observe that the MPDA algorithm terminates
     because every man will propose to every woman at most once.
-    Now consider a pair $m\in \M$, $w\in \W$ which is unmatched in the output matching
+    The claim follows from two simple invariants of the algorithm:
+    \begin{itemize}
+      \item Men propose in their order of preference
+      \item Women can only increase the rank of their tentative match over time
+        (and once they are matched, they stay matched)
+    \end{itemize}
+    Formally, consider a pair $m\in \M$, $w\in \W$ which
+    is unmatched in the output matching
     $\mu$. Suppose for contradiction $w\succ_m \mu(m)$ and $m\succ_w \mu(w)$.
-    Well, in the MPDA algorithm, $m$ would propose to $w$ before $\mu(m)$.
-    However, it's easy to observe that once a woman is proposed to,
-    they remains matched and can only increase their preference for their match.
-    This contradicts the fact that $w$ was eventually matched to $\mu(w)$.
+    In the MPDA algorithm, $m$ would propose to $w$ before $\mu(m)$.
+    This means that $w$ received a proposal from a man she preferred over her
+    eventual match $\mu(w)$, a contradiction.
   \end{proof}
 
   Note that this algorithm gives us a very interesting existence result: it was
@@ -253,9 +271,7 @@
     matching can pair $m$ to $w$.
   \end{claim}
   \begin{proof}
-    Let $\mu$ be any matching, not necessarily stable. We will show that if $w$
-    rejects $\mu(w)$ at any step of MPDA, then $\mu$ is not stable.
-
+    Let $\mu$ be any matching.
     Suppose that some pair, matched in $\mu$, is rejected during MPDA.
     Consider the first time during in the run of MPDA where such a rejection
     occurs, i.e. a woman $w$ rejects $\mu(w)$ but no other woman $w'$ has
@@ -263,11 +279,12 @@
     In particular, let $w$ reject $m=\mu(w)$ in favor of $m'\ne m$
     (either because $m'$ proposed to $w$,
     or because $m'$ was already matched to $w$ and $m$ proposed).
-    We have $m'\succ_w m$.
-    We have $\mu(m')\ne w$, simply because $\mu$ is a matching.
-    Because this is the first time any man has been rejected by a match from
-    $\mu$, $m'$ has not yet proposed to $\mu(m')$.
-    Because men propose in their preference order, we have $w \succ_{m'} \mu(m')$.
+    We have $m'\succ_w m$, so if $m'$ is unmatched in $\mu$, then $\mu$ is
+    unstable.
+    Thus we have $\mu(m') = w' \ne w$,
+    and because this is the first time any man has been rejected by a match from
+    $\mu$, $m'$ has not yet proposed to $w'$.
+    Because men propose in their preference order, we have $w \succ_{m'} w'$.
     However, this means $\mu$ is not stable.
 
     Thus, no woman can ever reject a stable partner in MPDA.
@@ -275,21 +292,21 @@
 
   We can now formalize our intuition that DA moves the men down their preference
   lists the minimal amount required to enforce stability.
+  Interestingly, a completely dual phenomenon occurs for the women's preferences.
 
-  \begin{corollary}\label{claimMenBestStable}
-    Let $\best(m)$ denote the most preferred match $m$ can achieve in any stable
-    matching, i.e. the maximum according to $\succ_m$ of the set
-    $\{w\in \W: \exists \mu:\text{$\mu$ is stable and $\mu(m)=w$}\}$
-    (or write $\best(m)=\emptyset$ if the above set is empty).
-
-    In the match returned by MPDA, every $m\in \M$ is paired to $\best(m)$.
+  \begin{corollary}\label{claimMenBestStable}\label{claimWomenWorstStable}
+    % Let $\best(m)$ denote the most preferred match $m$ can achieve in any stable
+    % matching, i.e. the maximum according to $\succ_m$ of the set
+    % $\{w\in \W: \exists \mu:\text{$\mu$ is stable and $\mu(m)=w$}\}$
+    % (or write $\best(m)=\emptyset$ if the above set is empty).
+    In the match returned by MPDA,
+    \begin{enumerate} 
+      \item every $m\in \M$ is paired to
+        his most preferred stable partner.
+      \item every $w\in \W$ is paired to their worst stable
+        match in $\M$.
+    \end{enumerate} 
   \end{corollary}
-
-  A completely dual phenomenon occurs for the women's preferences:
-  \begin{claim}\label{claimWomenWorstStable}
-    In the match returned by MPDA, every $w\in \W$ is paired to their worst stable
-    match in $\M$.
-  \end{claim}
   \begin{proof}
     Let $m\in \M$ and $w\in \W$ be paired by MPDA.
     Let $\mu$ be any stable matching which does not pair $m$ and $w$.
@@ -298,11 +315,8 @@
     Thus, $w$ cannot be stably matched to any man she prefers less than $m$.
   \end{proof}
 
-  We also get this reassuring fact:
-  \begin{corollary}
-    The matching output by the MPDA algorithm is independent of the order in which
-    men are selected to propose.
-  \end{corollary}
+  The matching output by the MPDA algorithm is independent of the order in which
+  men are selected to propose.
 
 
   % NOTE:: MAYBE TRY TO IMPROVE THIS TO HOLD MORE GENERALLY::
@@ -335,14 +349,14 @@
     women is also identical across every stable outcome.
   \end{proof}
 
-  The final result of this section strengthens the intuition provided by
+  The final results of this section strengthens the intuition provided by
   claims~\ref{claimWomenWorstStable} and \ref{claimMenBestStable} which states
   that the incentives of women and men are exactly opposed over the set of
   stable matchings.\footnote{
     DO NOT INCLUDE: note for myself: I think this fails in a subtle way for the
     resident-hospitals problem... look into this.
   }
-  \begin{claim}
+  \begin{claim}\label{claimOneUpOneDown}
     Let $\mu, \mu'$ be stable matchings, and say $\mu(m) = w$, but $\mu'(m)\ne w$.
     Then $\mu'(m) \succ_m w$ if and only if $\mu'(w) \prec_w m$.
   \end{claim}
@@ -363,18 +377,35 @@
     and in the second case, $(m,w')$ form a blocking pair in $\mu$.
     Thus, in either case $\mu$ is not stable.
   \end{proof}
+  \begin{claim}\label{claimDominateOposites}
+    Let $\mu$ and $\mu'$ be stable matchings.
+    Every man (weakly) prefers $\mu$ over $\mu'$ if and only if 
+    every woman (weakly) prefers $\mu'$ over $\mu$.
+  \end{claim}
+  \begin{proof}
+    Suppose each $m\in\M$ has $\mu'(m)\succeq_m\mu(m)$.
+    For each $w\in\W$ with $\mu(w)\ne\mu'(w)$, we must have
+    $\mu'(w)\prec_w \mu(w)$ by claim~\ref{claimOneUpOneDown}.
+    The proof for the other direction is identical.
+  \end{proof}
 
 \section{The Lattices of Stable Matchings}
 
   A partial order $\le$ is a reflexive, transitive, antisymmetric relation.
-  For elements $a,b$ of a partial order, a least upper bound $a\wedge b$ is
+  For elements $a,b$ of a partial order, a least upper bound $a\vee b$ is
   an element such that
-  $a\le a\wedge b$ and $b\le a \wedge b$, and for any 
-  $c$ such that $a\le c$ and $b\le c$, we have $a\wedge b\le c$.
-  A greatest lower bound $a\vee b$ is defined analogously, interchanging $\le$
+  $a\le a\vee b$ and $b\le a \vee b$, and for any 
+  $c$ such that $a\le c$ and $b\le c$, we have $a\vee b\le c$.
+  A greatest lower bound $a\wedge b$ is defined analogously, interchanging $\le$
   with $\ge$.
+  We also call $a\vee b$ the meet of $a$ and $b$ and $a\wedge b$ the join of $a$
+  and $b$.
   A lattice $L$ is a partial order in which there exist greatest lower bounds and
-  least upper bounds.
+  least upper bounds for any $a,b\in L$.
+  A lattice $L$ is distributive if the join and meet operations satisfy
+  the following equations:
+  \[ a \wedge (b \vee c) = (a\wedge b)\vee (a\wedge c) \]
+  \[ a \vee (b \wedge c) = (a\vee b)\wedge (a\vee c) \]
   An element $a$ of a lattice covers an element $b$, denoted $a \gtrdot b$,
   when $a > b$ and no element $c$ exists with $a > c > b$.
 
@@ -382,10 +413,80 @@
   if, for every $m\in\M$, we have $\mu(m)\succeq_m \mu'(m)$,
   that is, if every man is at least as happy with his match in $\mu$
   as in $\mu'$.
+  If $\mu$ dominates $\mu'$ we write $\mu\le \mu'$.
+  (ORGANIZE THIS THOUGHT OR POSSIBLY REVERSE IT:
+  we (somewhat misogynistically) say that one matching
+  dominates another based on the men's preferences.
+  However, we visualize starting at the man-optimal stable outcome at the bottom
+  of the stable matching lattice, and the woman-optimal being at the top.
+  This is why we write $\mu \le \mu'$ when $\mu$ dominates $\mu'$)
+
 
   \begin{theorem}
     The collection $\L$ of all stable matchings of some instance
-    form a distributive lattice under the dominance ordering $\preceq$.
+    form a distributive lattice under the dominance ordering $\le$.
+  \end{theorem}
+  \begin{proof}
+    It's easy to see that $\le$ forms a partial order on $\L$.
+    We'll show that least upper bounds exists (the proof for greatest lower
+    bounds is identical, interchanging men with women).
+    For stable matchings $\mu,\mu'$, define
+    $\tilde\mu = \mu\vee\mu'$ such that, for each woman $w$,
+    $\mu(w)$ is the most preferred partner
+    of $w$ among $\mu(w)$ and $\mu'(w)$.
+    It's clear that, if $\tilde\mu$ is a stable matching,
+    then it is the least upper bound for $\mu$ and $\mu'$.
+
+    First, we claim that $\tilde\mu$ is a matching.
+    Suppose some man $m$ is the match of two women $w$ and $w'$ in
+    $\tilde\mu$. Without loss of generality suppose $\mu(w)=m$,
+    so $m=\mu(w)\succ_w \mu'(w)$,
+    and $\mu'(w')=m$, so $m=\mu'(w')\succ_{w'}\mu(w')$.
+    Applying claim~\ref{claimOneUpOneDown} twice,
+    we get that $w=\mu(m)\prec_m \mu'(m)=w'$
+    and also that $w'=\mu'(m)\prec_m \mu(m)=w$,
+    a contradiction.
+
+    Second, we claim that $\tilde\mu$ is stable.
+    Suppose that $(m,w)$ is a blocking pair for $\tilde\mu$,
+    Certainly the partners of $m$ and $w$ must be from different matchings among
+    $\mu$ or $\mu'$, say $\tilde\mu(m)=\mu'(m)$ and 
+    $\tilde\mu(w)=\mu(w)\ne \mu'(w)$.
+    As $(m,w)$ is blocking, $w\succ_m\mu'(m)$ and $m\succ_w\mu(w)$.
+    But by the definition of $\tilde\mu$, we have $\mu(w)\succ_w\mu'(w)$,
+    so $m\succ_w\mu'(w)$ as well, and $\mu'$ is not stable.
+
+    Finally, we show that the join and meet operations in $\L$ are distributive.
+    Analogously to the above, we would define $\mu\wedge\mu'$ such that every
+    man gets their preferred partner from $\mu$ or $\mu'$.
+    By claim~\ref{claimOneUpOneDown}, this is equivalent to defining
+    $\mu\wedge\mu'$ such that every woman
+    gets worst partner from $\mu$ or $\mu'$.
+    Thus, the join and meet operations are distributive for the same reason that
+    the operations of min and max distribute over each other.
+    Thus, for every woman $w$,
+    \[ (\mu_1 \wedge (\mu_2 \vee \mu_3) )(w) \]
+    equal to the worse of $\mu_1(w)$ and (the better of $\mu_2(w)$ and
+    $\mu_3(w)$).
+    On the other hand, we have the better of
+    (the worse of $\mu_1(w)$ and $\mu_2(w)$)
+    and (the worse of $\mu_1(w)$ and $\mu_3(w)$),
+    which with a little thought you can realize that these two equations are
+    equal.
+  \end{proof}
+
+  We will not directly use this theorem, but it serves as motivation for why one
+  might expect a compact representation of $\L$ to exist.
+  In general, when one encounters a distributive lattice, it's always useful to
+  ask what its join irreducible elements are, and see if there's a natural
+  mathematical or algorithmic interpretation.
+  \begin{theorem}[Birkhoff's representation theorem]
+    For any finite distributive lattice $L$, there exists a subset $P$ of $L$
+    (namely, the ``join irreducible elements'' of $L$, which are those such
+    that, whenever $a\vee b = c$, we have $a=c$ or $b=c$) such that
+    $L$ is isomorphic to the collection of downward-closed subsets of $P$
+    (under the partial order induced by restricting $L$ to $P$), which
+    forms a lattice under set containment.
   \end{theorem}
 
   \begin{claim}
@@ -402,21 +503,50 @@
     woman (if matched) receives a match higher than her truncation point.
   \end{proof}
   \begin{claim}
-
+    Let $\mu$ be a stable matching for preferences $P$.
+    For each woman $w$, let $P_w$ denote the preference profile where each
+    preference list is identical except for that of $w$,
+    and $w$ truncates her list from $P$ one place after her stable partner from
+    $\mu$. The rest of the women should truncate their lists
+    just BEFORE the match in $\mu$.
+    Then the collection of matches which cover $\mu$
+    is contained in the set $\{\mu' | \mu' = MPDA(P_w), 
+    \mu'\in\L \}_{w\in\W}$, and all of those elements dominate $\mu'$.
   \end{claim}
   \begin{proof}
+
+    Key observation for the next section: the sequence of rejections made
+    (ignoring terminal phases) are a valid sequence of rejections for the
+    original MPDA algorithm with women truncating their preferences.
+    So you can find a maximal path from bottom to top of the lattice.
   \end{proof}
   \begin{claim}
     If $\mu' \gtrdot \mu$ is a covering pair in the stable matching lattice
     then $\mu'$ and $\mu$ differ by a rotation.
   \end{claim}
   \begin{proof}
+    In terms of what we need to eventually show, this won't be quite enough.
+    E.g. (12)(23) = (132) is a simple rotation when considered as a permutation,
+    but its composed of two (comparable) flips and not a simple rotation in the
+    stable marriage instance.
+
+    Here's something a bit more like it: bring this analysis after the
+    algorithm, then say this: ``if V is a simple cycle, then $\mu_{new}$
+    covers $\mu_{old}$, because (clearly its $\ge$) and in order to be
+    $>\mu_{old}$, some woman must reject her match.
+
     As $\mu' > \mu$, some woman $w$ must recieve a strictly better match in
     $\mu'$ than in $\mu$.
   \end{proof}
 
   Q: why must the set of rotations found be the same for every execution of the
-  algorithm?
+  algorithm? One approach to proving this formally: consider execution sequences
+  $P$ and $Q$ which contain different rotations, say $\rho\in P\setminus Q$.
+  Consider the first time during the execution of $Q$ that the following
+  happens: no future execution sequence which starts from the prefix of $Q$
+  which has already been executed will expose $\rho$.
+  Now, why did the future sequence exist before this step, but it doesn't exist
+  after?
 
 \section{The Rotation Poset}
   \begin{algorithm} 
