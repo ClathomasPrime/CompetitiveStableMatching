@@ -8,6 +8,25 @@
 \usepackage{amsmath,amsthm,amssymb}
 \usepackage{hyperref}
 % \usepackage[vlined,linesnumbered,ruled,resetcount]{algorithm2e}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{tikz}
+
+% the following nonsense allows you to put a comment below a big algorithm
+\usepackage{etoolbox}
+\makeatletter
+\AfterEndEnvironment{algorithm}{\let\@algcomment\relax}
+\AtEndEnvironment{algorithm}{\kern2pt\hrule\relax\vskip3pt\@algcomment}
+\let\@algcomment\relax
+\newcommand\algcomment[1]{\def\@algcomment{#1}}
+
+\renewcommand\fs@ruled{\def\@fs@cfont{\bfseries}\let\@fs@capt\floatc@ruled
+  \def\@fs@pre{\hrule height.8pt depth0pt \kern2pt}%
+  \def\@fs@post{}%
+  \def\@fs@mid{\kern2pt\hrule\kern2pt}%
+  \let\@fs@iftopcapt\iftrue}
+\makeatother
+
 
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
@@ -16,10 +35,6 @@
 \DeclareMathOperator*{\WOSM}{WOSM}
 \DeclareMathOperator*{\best}{best}
 \DeclareMathOperator*{\worst}{worst}
-
-\usepackage{algorithm}
-% \usepackage{algorithmicx}
-\usepackage[noend]{algpseudocode}
 
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\Rgz}{\mathbb{R}_{\ge 0}}
@@ -422,6 +437,12 @@
   This is why we write $\mu \le \mu'$ when $\mu$ dominates $\mu'$)
 
 
+  === IDEA: we don't really use the fact that the full set of matches is a
+  distributive lattice. Probably we should push most of the material of section
+  2 and the following theorem to an appendix. We should then mention here that
+  we just need the notion of maximal chains and of covering relations and that
+  we use the term lattice to distinguish the set of matchings from the rotation
+  poset (which isn't a lattice).
   \begin{theorem}
     The collection $\L$ of all stable matchings of some instance
     form a distributive lattice under the dominance ordering $\le$.
@@ -464,15 +485,17 @@
     gets worst partner from $\mu$ or $\mu'$.
     Thus, the join and meet operations are distributive for the same reason that
     the operations of min and max distribute over each other.
-    Thus, for every woman $w$,
-    \[ (\mu_1 \wedge (\mu_2 \vee \mu_3) )(w) \]
-    equal to the worse of $\mu_1(w)$ and (the better of $\mu_2(w)$ and
-    $\mu_3(w)$).
-    On the other hand, we have the better of
-    (the worse of $\mu_1(w)$ and $\mu_2(w)$)
-    and (the worse of $\mu_1(w)$ and $\mu_3(w)$),
-    which with a little thought you can realize that these two equations are
-    equal.
+    In particular, we can fix a woman $w$ and see that
+    \[ \big(\mu_1 \wedge (\mu_2 \vee \mu_3) \big)(w)
+    = \big( (\mu_1 \wedge \mu_2) \vee (\mu_1 \wedge \mu_3) \big)(w) \]
+    % Thus, for every woman $w$,
+    % equal to the worse of $\mu_1(w)$ and (the better of $\mu_2(w)$ and
+    % $\mu_3(w)$).
+    % On the other hand, we have the better of
+    % (the worse of $\mu_1(w)$ and $\mu_2(w)$)
+    % and (the worse of $\mu_1(w)$ and $\mu_3(w)$),
+    % which with a little thought you can realize that these two equations are
+    % equal.
   \end{proof}
 
   We will not directly use this theorem, but it serves as motivation for why one
@@ -492,15 +515,40 @@
   \begin{claim}
     Let $P$ be some instance of the stable matching problem
     with man-optimal stable match $\mu_0$, and let
-    $P'$ be an instance identical to $P$, except some set of women truncate
+    $P'$ be an instance identical to $P$, except some set of women
+    who are all matched in $\mu_0$ can truncate
     their preference lists. Let $\mu$ be the result of $MPDA(P')$.
     Then $\mu$ is stable for the original set of preferences $P$ if and only if
-    the set of matched agents in $\mu$ is identical to that in $\mu_0$.
+    the set of matched women in $\mu$ is identical to that in $\mu_0$.
+    Moreover, if $\mu$ is stable for $P$ then it is the man-optimal stable match
+    in which each women receives a match above their point of truncation.
   \end{claim}
   \begin{proof}
-    One fact towards this:
-    Observe that $MPDA$ produces the man optimal stable match such that each
-    woman (if matched) receives a match higher than her truncation point.
+    If the set of matched agents differs, then $\mu$ cannot be stable simply by
+    the rural hospital theorem \ref{claimRuralDoctors}.
+
+    For the other direction, suppose that $\mu$ is the result of $MPDA(P')$.
+    We'll show that some woman matched in $\mu_0$ must go unmatched in $\mu$,
+    using almost the same proof that originally showed that the result of $MPDA$
+    is stable.
+    In particular, suppose $(m,w)$ blocks $MPDA(P')$ (with respect to the
+    original set of preferences $P$).
+    As $w\succ_m \mu(m)$, $m$ would propose to $w$ before his current match
+    (or before going unmatched).
+    Note that if $w$ was unmatched in $\mu_0$, then $w$ does not truncate her
+    preferences, so $w$ would certainly get a match at least as good as $m$.
+    Thus we can assume that $w$ was matched in $\mu_0$ and truncates her
+    preferences.
+    As $m\succ_w \mu(w)$, yet $w$ wound up with a worse outcome than $m$,
+    it must be the case that $w$ rejected $m$ because he was past her truncation
+    point on her list.
+    If $w$ went matched in $MPDA(P')$, she would certainly get a matched above
+    her truncation point, so we would have $\mu(w)\succ_w m$.
+    Thus, $w$ cannot be matched in $\mu$.
+
+    % One fact towards this:
+    % Observe that $MPDA(P')$ produces the man optimal stable match such that each
+    % woman (if matched) receives a match higher than her truncation point.
   \end{proof}
   \begin{claim}
     Let $\mu$ be a stable matching for preferences $P$.
@@ -511,7 +559,7 @@
     just BEFORE the match in $\mu$.
     Then the collection of matches which cover $\mu$
     is contained in the set $\{\mu' | \mu' = MPDA(P_w), 
-    \mu'\in\L \}_{w\in\W}$, and all of those elements dominate $\mu'$.
+    \mu'\text{ is stable for } P\}_{w\in\W}$, and all of those elements dominate $\mu'$.
   \end{claim}
   \begin{proof}
 
@@ -533,7 +581,8 @@
     Here's something a bit more like it: bring this analysis after the
     algorithm, then say this: ``if V is a simple cycle, then $\mu_{new}$
     covers $\mu_{old}$, because (clearly its $\ge$) and in order to be
-    $>\mu_{old}$, some woman must reject her match.
+    $>\mu_{old}$, some woman must reject her match (but MPDA finds the
+    man-optimal such a thing).
 
     As $\mu' > \mu$, some woman $w$ must recieve a strictly better match in
     $\mu'$ than in $\mu$.
@@ -549,14 +598,67 @@
   after?
 
 \section{The Rotation Poset}
-  \begin{algorithm} 
+
+  Let's start with an example of how to use the facts proven above.
+  Start with stable matching instance
+
+  \begin{tabular}{c | c c | c}
+    $m_1$ & 1 & 2 & \textbf{3} \\
+    $m_2$ & 2 & 1 & 3 \\
+    \cline{2-3}
+    $m_3$ & 3 & 5 & 1 \\
+    $m_4$ & 4 & 3 & 5 \\
+    $m_5$ & 5 & 4 & \\
+  \end{tabular}
+  \qquad \qquad
+  \begin{tabular}{c | c c c c}
+    $w_1$ & & \multicolumn{1}{c|}{3} & 2 & 1 \\
+    $w_2$ & & \multicolumn{1}{c|}{ } & 1 & 2 \\
+    \cline{3-5}
+    $w_3$ & \multicolumn{1}{c|}{2} & 4 & \textbf{1} & 3 \\
+    \cline{3-3}
+    $w_4$ & & & \multicolumn{1}{|c}{5} & 4 \\
+    $w_5$ & & 4 & \multicolumn{1}{|c}{3} & 5 \\
+  \end{tabular}
+  \qquad \qquad
+  \begin{tabular}{c}
+    \begin{tikzpicture}[scale=1]
+      \node (zero) at (0,-1) {$(12345)$};
+      \node (l) at (-1,0) {$({\bf21}345)$};
+      \node (r) at (1,0) {$(12{\bf534})$};
+      \node (b) at (0,1) {$(21534)$};
+      \node (one) at (0,2) {$(2{\bf315}4)$};
+      \draw (zero) -- (l) -- (b) -- (one);
+      \draw (zero) -- (r) -- (b);
+    \end{tikzpicture} 
+  \end{tabular}
+
+  Starting from the man-optimal match, the rotations
+  $\rho_1=[(1,2),(2,1)]$ and $\rho_2=[(3,3),(4,4),(5,5)]$
+  are exposed (this is easily seen
+  from the border separated rankings).
+  Moreover, once both these rotations have been applied, rotation
+  $\rho_3=[(2,1),(4,3),(3,5)]$ is exposed, and eliminating $\rho_3$ gets us to
+  the woman-optimal outcome.
+
+  Suppose you flip 1 and 2 first, then woman 2 rejects man 1.
+  This leads to a terminal
+  phase but also finds rotation $\rho_2$.
+  One the other hand, woman 1 rejecting man 2 would start to find $\rho_3$, then
+  find $\rho_2$, then complete $\rho_3$.
+
+  \begin{algorithm}
     \caption{MOSM to WOSM Conversion Algorithm}\label{algMosmToWosm}
   \begin{algorithmic}[1]
     \State Let $\mu$ be the man-optimal stable matching
     \State For each man $m$, let $R(m)$ be the set of women who rejected $m$
     during the run of $MPDA$.
-    \State Let $S$ be the set of unmatched women $\overline\W$
+    \State Let $S$ be the set of unmatched women in $\mu$
     % \State\Comment $S$ will be those women who have upgraded to their optimal stable match
+    \State Set $pred^1_m = \emptyset$ for each man $m$
+      \Comment Store the most recent rotation moving $m$
+    \State Label each entry of each woman's preference list with $\emptyset$
+      \Comment Store the rotation moving $w$ \emph{above} certain men
     \While { $S \ne \W$ }
       \State Store $\tilde\mu \leftarrow \mu$
       \Comment $\tilde\mu$ stores the most recent \emph{stable} match encountered
@@ -567,15 +669,17 @@
 
       % \While { $m \ne \emptyset$ }
       \While { $V \ne [\ ]$ }
-        \State Let $pred_m = \emptyset$
-          \Comment We keep track of the rotations
+        \State Let $pred_{m}^2 = \emptyset$
+          \Comment Keep track of predecessor rotations
         \State Let $w$ be $m$'s most preferred woman not in $R(m)$
 
         \While { $\tilde\mu(w) >_w m$ }
           \Comment while $w$ has received a better stable match
           \State Add $w$ to $R(m)$
           \Comment $w$ rejects $m$
-          \State If rotation $\rho$ moved $w$ above $m$, add $\rho$ to $pred_m$
+          \State If $w$ labeled $m$ with $\rho$, add $\rho$ to $pred_m^2$
+          \State \Comment If rotation $\rho$ moved 
+            $w$ above $m$, then $\rho$ must precede the current rotation
           \State Update $w$ to $m$'s top woman not in $R(m)$ (or set $w$ to $\emptyset$)
         \EndWhile
 
@@ -591,14 +695,12 @@
 
         \ElsIf {$w$ appears in $V$}
           \Comment New rotation found
-          \If { $w \ne \hat w = v_1$ }
-            \State Set $m_{float} \leftarrow \mu(w) $
+          \If { $w \ne \hat w$ }
+            % \State Set $m_{float} \leftarrow \mu(w) $
+            \State Swap $\mu(w) \leftrightarrow m$
+            \Comment Subtlety: $w$ does not reject $m$ yet
           \EndIf
-          \State Suppose $V = [(m_1,w_1), (m_2,w_2), \ldots,
-            (m_k,w_k)]$ with $w = w_\ell$ for some $\ell \le k$
-          \State Update $\mu(w)=m$
-            and $\tilde\mu(v_i) = \mu(v_i)$ for $i=\ell,\ell+1,\ldots, J$
-          \State Remove $\rho = [(m_\ell,w_\ell),\ldots,(m_\ell,w_\ell)]$ from $V$
+          \State \Call{BuildNewRotation}{$w$}
 
         \ElsIf {$w\notin V$, $w\notin S$} 
           \Comment Continue building rejection chain $V$
@@ -610,6 +712,21 @@
 
       \EndWhile
     \EndWhile
+
+    \
+    \Function{BuildNewRotation}{$w$}
+      \State Suppose $V = [(m_1,w_1), (m_2,w_2), \ldots,
+        (m_k,w_k)]$ with $w = w_\ell$ for some $\ell \le k$
+      \State Update $\tilde\mu(w_i) = \mu(w_i)$ for $i=\ell,\ell+1,\ldots, J$
+      \State Remove $\rho^* = [(m_\ell,w_\ell),\ldots,(m_k,w_k)]$ from $V$
+      \State Add rotation $\rho^*$ with predecessors
+        $\bigcup_{i=\ell}^k pred_{m_i}^1\cup pred_{m_i}^2 $
+        to the rotation poset
+      \State For each $i=\ell,\ldots,k$, set $pred_{m_i}^1 = \rho^*$
+      \State For each $i=\ell,\ldots,k$, and for each man $m$ between 
+      $m_i$ and $m_{i-1}$ (or $m_k$ if $i=\ell$) on $w_i$'s list:
+      \State \qquad $w$ labels $m$ with $\rho^*$
+    \EndFunction
   \end{algorithmic}
   \end{algorithm}
 
@@ -1052,5 +1169,50 @@
 
 \bibliography{MechDesign}{}
 \bibliographystyle{alpha}
+
+\appendix
+
+\section{The Error in \cite{GusfieldStableStructureAlgs89}}
+
+The algorithm of \cite{GusfieldStableStructureAlgs89} correctly identifies all
+of the rotations in a stable matching instance. However, there is a slight error
+in the construction of the order relations for the rotation poset.
+In particular, once the rotations are found (via an algorithm essentially
+equivalent to our algorithm~\ref{algMosmToWosm}), they propose the following:
+\begin{algorithm}
+  \caption{Construct rotation ordering}\label{algRotationOrderGI}
+\begin{algorithmic}[1]
+  \For {Each rotation $\rho$ and pair $(m_i,w_i)\in \rho$}
+    \State Label $w_i$ in $m_i$'s preference list with a type 1 $\rho$ label
+    \For {Each $m$ strictly between $m_i$ and $m_{i-1}$ on $w_i$'s list}
+      % \Comment $w_i$ upgrades $m_i$ to $m_{i-1}$
+      \State Label $w_i$ in $m$'s preference list with a type 2 $\rho$ label
+    \EndFor
+  \EndFor
+  \For {Each man $m$}
+    \State Set $\rho^* = \emptyset$
+    \For {Each woman $w$ on $m$'s preference list, in order}
+      \If {$w$ has a type 1 label of $\rho$}
+        \If { $\rho^* \ne \emptyset$ } 
+          Add $\rho^*$ as a predecessor of $\rho$
+        \EndIf
+        \State Set $\rho^* = \rho$
+      \EndIf
+      \If { $w$ has a type 2 label of $\rho$}
+        \If {$\rho^*\ne \emptyset$}
+          Add $\rho$ as a predecessor of $\rho^*$
+        \EndIf
+      \EndIf
+    \EndFor
+  \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+The idea behind this algorithm is very sound:
+Suppose the labeled women on $m$'s preference list consist of
+of $m$ has woman $w$ on his preference list,
+and rotation $\rho$ moves $w$ from below to above $m$
+on her own preference list.
+
 
 \end{document}
