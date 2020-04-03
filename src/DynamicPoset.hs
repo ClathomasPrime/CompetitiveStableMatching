@@ -21,6 +21,8 @@ import Utils
 
 import Debug.Trace
 
+-- a test edit
+
 instance (Ord a, Ord b, Read a, Read b) => Read (Bimap a b) where
   readsPrec _ str = [(BM.fromList . read $ str, "")]
 
